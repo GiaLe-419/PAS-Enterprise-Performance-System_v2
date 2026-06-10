@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Remix: PAS Enterprise Performance System_v1",
+  "description": "Streamline organizational performance cycles with goal tracking, multi-level appraisals, calibration modules, and comprehensive HR reporting and analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
