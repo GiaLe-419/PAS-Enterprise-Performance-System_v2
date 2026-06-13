@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "appId": "f7f50d6a-a562-42ba-9c74-b50f7b374e88",
+  "appDisplayName": "PAS-Enterprise-Performance-System",
+  "region": "prod",
+  "environmentId": "6061c117-5ce7-e349-abed-5a92416f7d81",
+  "description": " ",
+  "buildPath": "./dist",
+  "buildEntryPoint": "index.html",
+  "localAppUrl": "http://localhost:3000",
+  "logoPath": "Default",
+  "connectionReferences": {},
+  "databaseReferences": {}
+}
