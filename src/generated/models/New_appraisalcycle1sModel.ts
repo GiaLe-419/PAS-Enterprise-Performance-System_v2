@@ -36,6 +36,7 @@ export interface New_appraisalcycle1sBase {
   new_performanceyear?: number;
   new_startdate?: string;
   new_status?: New_appraisalcycle1snew_status;
+  new_tesst?: number;
   overriddencreatedon?: string;
   ownerid: string;
   owneridtype: string;

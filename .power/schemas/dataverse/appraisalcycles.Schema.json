@@ -279,6 +279,13 @@
           "x-ms-schema-name": "new_statusName",
           "x-ms-read-only": true
         },
+        "new_tesst": {
+          "type": "string",
+          "title": "tesst",
+          "x-ms-dataverse-attribute": "new_tesst",
+          "x-ms-dataverse-type": "DecimalType",
+          "x-ms-schema-name": "new_tesst"
+        },
         "overriddencreatedon": {
           "type": "string",
           "title": "Record Created On",
