@@ -16,6 +16,26 @@
         "appraisalcycles": {
           "entitySetName": "new_appraisalcycle1s",
           "logicalName": "new_appraisalcycle1"
+        },
+        "customauditlogs": {
+          "entitySetName": "new_customauditlogs",
+          "logicalName": "new_customauditlog"
+        },
+        "employeesprofiles": {
+          "entitySetName": "new_employeesprofiles",
+          "logicalName": "new_employeesprofile"
+        },
+        "kpis": {
+          "entitySetName": "new_kpis",
+          "logicalName": "new_kpi"
+        },
+        "peerfeedbacks": {
+          "entitySetName": "new_peerfeedback1s",
+          "logicalName": "new_peerfeedback1"
+        },
+        "performanceappraisals": {
+          "entitySetName": "new_performanceappraisals",
+          "logicalName": "new_performanceappraisal"
         }
       },
       "environmentVariableName": ""

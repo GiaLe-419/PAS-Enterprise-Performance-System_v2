@@ -6,6 +6,16 @@
 // Models
 export * as CommonModels from './models/CommonModels';
 export * as New_appraisalcycle1sModel from './models/New_appraisalcycle1sModel';
+export * as New_customauditlogsModel from './models/New_customauditlogsModel';
+export * as New_employeesprofilesModel from './models/New_employeesprofilesModel';
+export * as New_kpisModel from './models/New_kpisModel';
+export * as New_peerfeedback1sModel from './models/New_peerfeedback1sModel';
+export * as New_performanceappraisalsModel from './models/New_performanceappraisalsModel';
 
 // Services
 export * from './services/New_appraisalcycle1sService';
+export * from './services/New_customauditlogsService';
+export * from './services/New_employeesprofilesService';
+export * from './services/New_kpisService';
+export * from './services/New_peerfeedback1sService';
+export * from './services/New_performanceappraisalsService';
