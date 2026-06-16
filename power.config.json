@@ -10,5 +10,15 @@
   "localAppUrl": "http://localhost:3000",
   "logoPath": "Default",
   "connectionReferences": {},
-  "databaseReferences": {}
+  "databaseReferences": {
+    "default.cds": {
+      "dataSources": {
+        "appraisalcycles": {
+          "entitySetName": "new_appraisalcycle1s",
+          "logicalName": "new_appraisalcycle1"
+        }
+      },
+      "environmentVariableName": ""
+    }
+  }
 }
