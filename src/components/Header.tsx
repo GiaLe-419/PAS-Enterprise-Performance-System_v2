@@ -1,11 +1,26 @@
-import React from 'react';
-import { useApp } from '../context/AppContext';
-import { Bell, HelpCircle, Shield, RefreshCw, UserCheck, LogOut } from 'lucide-react';
+// src/components/Header.tsx
+import React from "react";
+import { useDataverse } from "@/src/context/DataverseContext";
+import { AuthUser } from "@/src/services/AuthService";
+import { Bell, HelpCircle, Shield, UserCheck, LogOut } from "lucide-react";
 
-interface HeaderProps {}
+interface HeaderProps {
+  user: AuthUser; // ✅ Nhận user từ props
+  onLogout: () => void; // ✅ Nhận logout function từ props
+  isSandbox?: boolean; // ✅ Optional: nếu có sandbox
+  onSwitchUser?: (userId: string) => void; // ✅ Optional: switch user trong sandbox
+  users?: AuthUser[]; // ✅ Optional: danh sách user để switch
+}
 
-export const Header: React.FC<HeaderProps> = () => {
-  const { users, currentUser, switchUser, activeCycle, loginType, logout } = useApp();
+export const Header: React.FC<HeaderProps> = ({
+  user,
+  onLogout,
+  isSandbox = false,
+  onSwitchUser,
+  users = [],
+}) => {
+  // ✅ Không dùng useApp() nữa
+  // Dùng props
 
   return (
     <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 sticky top-0 z-40 shadow-sm">
@@ -14,7 +29,9 @@ export const Header: React.FC<HeaderProps> = () => {
           <Shield size={20} className="text-white" />
         </div>
         <div>
-          <span className="font-semibold text-lg text-blue-950 font-sans tracking-tight">PAS</span>
+          <span className="font-semibold text-lg text-blue-950 font-sans tracking-tight">
+            PAS
+          </span>
           <span className="hidden sm:inline bg-blue-50 text-blue-800 text-xs px-2 py-0.5 rounded-full ml-2 font-medium border border-blue-100">
             Performance Appraisal Platform
           </span>
@@ -22,23 +39,24 @@ export const Header: React.FC<HeaderProps> = () => {
       </div>
 
       <div className="flex items-center gap-4">
-        {/* Sandbox Actor Switcher - Required to demo different role flows only in Sandbox */}
-        {loginType === 'Sandbox' ? (
+        {/* Sandbox Actor Switcher */}
+        {isSandbox ? (
           <div className="flex items-center gap-2 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
             <span className="text-xs text-amber-800 font-semibold flex items-center gap-1">
               <UserCheck size={14} className="text-amber-700" /> Sandbox Act-As:
             </span>
             <select
-              value={currentUser.id}
-              onChange={(e) => switchUser(e.target.value)}
+              value={user.id}
+              onChange={(e) => onSwitchUser?.(e.target.value)}
               className="bg-transparent border-none text-xs font-bold text-slate-800 focus:ring-0 cursor-pointer p-0 pr-8 outline-none"
             >
               {users.map((u) => {
-                const displayRole = u.role === 'HR' 
-                  ? 'HR BP' 
-                  : u.role === 'SeniorManager' 
-                    ? 'Senior Manager' 
-                    : u.role;
+                const displayRole =
+                  u.role === "HR"
+                    ? "HR BP"
+                    : u.role === "SeniorManager"
+                      ? "Senior Manager"
+                      : u.role;
                 return (
                   <option key={u.id} value={u.id}>
                     {u.name} ({displayRole})
@@ -60,8 +78,8 @@ export const Header: React.FC<HeaderProps> = () => {
         )}
 
         {/* Logout button */}
-        <button 
-          onClick={logout}
+        <button
+          onClick={onLogout}
           title="Log Out of Session"
           className="p-1.5 px-3 text-xs text-red-650 hover:text-white bg-red-50 hover:bg-red-600 border border-red-200 hover:border-red-600 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer font-bold"
         >

@@ -1,75 +1,207 @@
-import React, { useState } from 'react';
-import { useApp } from '../context/AppContext';
-import { Layers, Plus, Check, Play, Square, Scale, Star, Sliders, Calendar, AlertCircle } from 'lucide-react';
+// src/components/CycleManagementView.tsx
+import React, { useState, useEffect } from "react";
+import { useDataverse } from "@/src/context/DataverseContext";
+import { AuthUser } from "@/src/generated/services/AuthService";
+import {
+  Layers,
+  Plus,
+  Check,
+  Play,
+  Square,
+  Scale,
+  Star,
+  Sliders,
+  Calendar,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
 
-export const CycleManagementView: React.FC = () => {
-  const { cycles, createCycle, updateCycleStatus, togglePeerFeedbackEnabled, currentUser } = useApp();
+// ============ PROPS ============
+interface CycleManagementViewProps {
+  user: AuthUser; // ✅ Nhận user từ props
+}
+
+// ============ COMPONENT ============
+export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
+  user,
+}) => {
+  // ✅ Dùng DataverseContext
+  const {
+    cycles,
+    loading,
+    error,
+    loadCycles,
+    createCycle,
+    updateCycleStatus,
+    deleteCycle,
+  } = useDataverse();
+
   const [isCreating, setIsCreating] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form states
-  const [name, setName] = useState('');
-  const [type, setType] = useState<'Mid-Year' | 'End-Year'>('Mid-Year');
-  const [year, setYear] = useState(2024);
-  const [startDate, setStartDate] = useState('2024-07-01');
-  const [endDate, setEndDate] = useState('2024-12-31');
+  const [name, setName] = useState("");
+  const [type, setType] = useState<"Mid-Year" | "End-Year">("Mid-Year");
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [startDate, setStartDate] = useState(
+    `${new Date().getFullYear()}-07-01`,
+  );
+  const [endDate, setEndDate] = useState(`${new Date().getFullYear()}-12-31`);
   const [goalsWeight, setGoalsWeight] = useState(70);
   const [peerEnabled, setPeerEnabled] = useState(false);
 
   // Validations
-  const [errorMsg, setErrorMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
 
-  const handleCreate = (e: React.FormEvent) => {
+  // Load cycles khi component mount
+  useEffect(() => {
+    loadCycles();
+  }, []);
+
+  // src/components/CycleManagementView.tsx
+  // Sửa hàm handleCreate
+
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg('');
+    console.log("🔍 ===== CYCLE MANAGEMENT: handleCreate START =====");
 
+    setErrorMsg("");
+    setSuccessMsg("");
+    setIsSubmitting(true);
+
+    // Validation
     if (!name.trim()) {
-      setErrorMsg('Please enter a descriptive cycle label.');
+      console.warn("⚠️ Validation failed: Name is empty");
+      setErrorMsg("Please enter a descriptive cycle label.");
+      setIsSubmitting(false);
       return;
     }
 
-    const competenciesWeight = 100 - goalsWeight;
+    if (!startDate || !endDate) {
+      console.warn("⚠️ Validation failed: Dates are missing");
+      setErrorMsg("Please select both start and end dates.");
+      setIsSubmitting(false);
+      return;
+    }
 
-    createCycle({
-      name,
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (start >= end) {
+      console.warn("⚠️ Validation failed: End date is before start date");
+      setErrorMsg("End date must be after start date.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    const cycleData = {
+      name: name.trim(),
       type,
       year: Number(year),
       startDate,
       endDate,
-      ratingScale: {
-        min: 1,
-        max: 5,
-        labels: {
-          1: 'Unsatisfactory (Needs Imp.)',
-          2: 'Developing (Fair)',
-          3: 'Successful (Good)',
-          4: 'Superior (Great)',
-          5: 'Distinguished (Elite)'
-        }
-      },
-      weights: {
-        goals: goalsWeight,
-        competencies: competenciesWeight
-      },
-      peerFeedbackEnabled: peerEnabled
-    });
+      goalWeighting: goalsWeight,
+      peerFeedbackEnabled: peerEnabled,
+    };
 
-    // Reset clean states
-    setIsCreating(false);
-    setName('');
-    setErrorMsg('');
+    console.log("📤 CYCLE DATA TO CREATE:", JSON.stringify(cycleData, null, 2));
+    console.log("👤 Current user:", user);
+
+    try {
+      console.log("🚀 Calling createCycle...");
+      const result = await createCycle(cycleData);
+      console.log("✅ createCycle result:", result);
+
+      // Reset form
+      setIsCreating(false);
+      setName("");
+      setErrorMsg("");
+      setSuccessMsg("Cycle created successfully!");
+      console.log("✅ Cycle creation completed successfully!");
+
+      setTimeout(() => setSuccessMsg(""), 3000);
+    } catch (err) {
+      console.error("❌ ===== CREATE CYCLE ERROR IN VIEW =====");
+      console.error("❌ Error:", err);
+
+      if (err instanceof Error) {
+        console.error("❌ Error message:", err.message);
+        console.error("❌ Error stack:", err.stack);
+      }
+
+      setErrorMsg(
+        err instanceof Error ? err.message : "Failed to create cycle",
+      );
+    } finally {
+      setIsSubmitting(false);
+      console.log("🔍 ===== CYCLE MANAGEMENT: handleCreate END =====");
+    }
   };
 
+  // ===== HANDLE STATUS CHANGE =====
+  const handleUpdateStatus = async (
+    id: string,
+    status: "Active" | "Closed",
+  ) => {
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    try {
+      await updateCycleStatus(id, status);
+      setSuccessMsg(
+        `Cycle ${status === "Active" ? "activated" : "closed"} successfully!`,
+      );
+      setTimeout(() => setSuccessMsg(""), 3000);
+    } catch (err) {
+      setErrorMsg(
+        err instanceof Error ? err.message : "Failed to update cycle status",
+      );
+      setTimeout(() => setErrorMsg(""), 5000);
+    }
+  };
+
+  // ===== HANDLE DELETE =====
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this cycle?")) return;
+
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    try {
+      await deleteCycle(id);
+      setSuccessMsg("Cycle deleted successfully!");
+      setTimeout(() => setSuccessMsg(""), 3000);
+    } catch (err) {
+      setErrorMsg(
+        err instanceof Error ? err.message : "Failed to delete cycle",
+      );
+      setTimeout(() => setErrorMsg(""), 5000);
+    }
+  };
+
+  // Check if user is HR
+  const isHR = user.role === "HR" || user.role === "SeniorManager";
+
+  // ===== RENDER =====
   return (
     <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6 font-sans">
       {/* Title block */}
       <section className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
           <h2 className="text-xl font-bold text-slate-800 tracking-tight flex items-center gap-2">
-            <Layers className="text-blue-900" size={20} /> Appraisal Cycle Configuration Desk
+            <Layers className="text-blue-900" size={20} /> Appraisal Cycle
+            Configuration Desk
           </h2>
-          <p className="text-xs text-slate-500 mt-1">Configure and activate multi-role performance review windows cross-enterprise.</p>
+          <p className="text-xs text-slate-500 mt-1">
+            Configure and activate multi-role performance review windows
+            cross-enterprise.
+            {loading && (
+              <span className="ml-2 text-blue-600">(Loading...)</span>
+            )}
+          </p>
         </div>
-        {currentUser.role === 'HR' && !isCreating && (
+        {isHR && !isCreating && (
           <button
             onClick={() => setIsCreating(true)}
             className="bg-blue-900 hover:bg-blue-800 text-white py-2 px-4 rounded-lg text-xs font-bold flex items-center gap-2 shadow-sm transition-all cursor-pointer"
@@ -79,50 +211,93 @@ export const CycleManagementView: React.FC = () => {
         )}
       </section>
 
+      {/* Messages */}
+      {errorMsg && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+          <AlertCircle size={18} className="text-red-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-bold text-red-800">Error</p>
+            <p className="text-xs text-red-700">{errorMsg}</p>
+          </div>
+        </div>
+      )}
+
+      {successMsg && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-start gap-3">
+          <Check size={18} className="text-emerald-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-bold text-emerald-800">Success</p>
+            <p className="text-xs text-emerald-700">{successMsg}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Error from context */}
+      {error && !errorMsg && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+          <p className="text-xs text-red-700">{error}</p>
+          <button
+            onClick={loadCycles}
+            className="mt-2 text-xs text-blue-600 hover:text-blue-800 font-bold"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Main setup area */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left main cycles list / or Create Form */}
         <div className="lg:col-span-8 space-y-6">
           {isCreating ? (
             <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 font-mono">Create Performance Cycle</h3>
-              {errorMsg && (
-                <div className="bg-red-50 text-red-800 p-3 rounded-lg border border-red-100 flex items-center gap-2 text-xs">
-                  <AlertCircle size={16} className="text-red-700" /> {errorMsg}
-                </div>
-              )}
+              <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 font-mono">
+                Create Performance Cycle
+              </h3>
 
-              <form onSubmit={handleCreate} className="space-y-4 text-xs font-sans">
+              <form
+                onSubmit={handleCreate}
+                className="space-y-4 text-xs font-sans"
+              >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="block font-bold text-slate-700">Cycle Label Name</label>
+                    <label className="block font-bold text-slate-700">
+                      Cycle Label Name
+                    </label>
                     <input
                       type="text"
                       placeholder="e.g., FY24 Mid-Year Review"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-lg p-2.5 outline-none font-medium"
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
-                      <label className="block font-bold text-slate-700">Type</label>
+                      <label className="block font-bold text-slate-700">
+                        Type
+                      </label>
                       <select
                         value={type}
                         onChange={(e) => setType(e.target.value as any)}
                         className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 font-medium outline-none"
+                        disabled={isSubmitting}
                       >
                         <option value="Mid-Year">Mid-Year</option>
                         <option value="End-Year">End-Year</option>
                       </select>
                     </div>
                     <div className="space-y-1">
-                      <label className="block font-bold text-slate-700">Year</label>
+                      <label className="block font-bold text-slate-700">
+                        Year
+                      </label>
                       <input
                         type="number"
                         value={year}
                         onChange={(e) => setYear(Number(e.target.value))}
                         className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 font-medium outline-none"
+                        disabled={isSubmitting}
                       />
                     </div>
                   </div>
@@ -130,21 +305,27 @@ export const CycleManagementView: React.FC = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="block font-bold text-slate-700">Workflow Open Date</label>
+                    <label className="block font-bold text-slate-700">
+                      Workflow Open Date
+                    </label>
                     <input
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 font-medium font-mono outline-none"
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="block font-bold text-slate-700">Workflow Closing Date</label>
+                    <label className="block font-bold text-slate-700">
+                      Workflow Closing Date
+                    </label>
                     <input
                       type="date"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 font-medium font-mono outline-none"
+                      disabled={isSubmitting}
                     />
                   </div>
                 </div>
@@ -152,13 +333,17 @@ export const CycleManagementView: React.FC = () => {
                 {/* Score Config rule weights */}
                 <div className="space-y-2 bg-slate-50 border border-slate-200 rounded-lg p-4">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="font-bold text-slate-700">Configurable Weight Ratio Score</span>
+                    <span className="font-bold text-slate-700">
+                      Configurable Weight Ratio Score
+                    </span>
                     <span className="font-mono text-blue-900 font-bold bg-blue-50 px-2 py-0.5 rounded text-[11px] border border-blue-105">
                       Goals: {goalsWeight}% / Competencies: {100 - goalsWeight}%
                     </span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="font-medium text-slate-500">Scale Balance:</span>
+                    <span className="font-medium text-slate-500">
+                      Scale Balance:
+                    </span>
                     <input
                       type="range"
                       min="30"
@@ -167,29 +352,35 @@ export const CycleManagementView: React.FC = () => {
                       value={goalsWeight}
                       onChange={(e) => setGoalsWeight(Number(e.target.value))}
                       className="flex-1 accent-blue-900 cursor-pointer"
+                      disabled={isSubmitting}
                     />
                   </div>
                   <p className="text-[10px] text-slate-400 mt-1 leading-normal">
-                    Business Rule: Enforce that Goals (KPIs) weight and core Competencies (soft skills) weight sum directly to 100%. Managers appraisals must conform to weights defined here.
+                    Business Rule: Enforce that Goals (KPIs) weight and core
+                    Competencies (soft skills) weight sum directly to 100%.
                   </p>
                 </div>
 
                 {/* Peer feedback config block */}
                 <div className="space-y-2 bg-slate-50 border border-slate-200 rounded-lg p-4">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-700">Include Anonymous Peer Feedback Stage</span>
+                    <span className="font-bold text-slate-700">
+                      Include Anonymous Peer Feedback Stage
+                    </span>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
                         type="checkbox"
                         checked={peerEnabled}
                         onChange={(e) => setPeerEnabled(e.target.checked)}
                         className="sr-only peer"
+                        disabled={isSubmitting}
                       />
                       <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-900"></div>
                     </label>
                   </div>
                   <p className="text-[10px] text-slate-400 mt-1 leading-normal">
-                    Enabling this adds an anonymous 360-degree peer feedback stage between Self-Appraisal and Manager Review.
+                    Enabling this adds an anonymous 360-degree peer feedback
+                    stage between Self-Appraisal and Manager Review.
                   </p>
                 </div>
 
@@ -198,14 +389,23 @@ export const CycleManagementView: React.FC = () => {
                     type="button"
                     onClick={() => setIsCreating(false)}
                     className="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2 px-4 rounded-lg hover:shadow-xs transition-all cursor-pointer"
+                    disabled={isSubmitting}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="bg-blue-900 hover:bg-blue-800 text-white font-bold py-2 px-5 rounded-lg shadow-sm transition-all cursor-pointer"
+                    disabled={isSubmitting}
+                    className="bg-blue-900 hover:bg-blue-800 text-white font-bold py-2 px-5 rounded-lg shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
-                    Activate Templates and Save
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      "Activate Templates and Save"
+                    )}
                   </button>
                 </div>
               </form>
@@ -214,100 +414,165 @@ export const CycleManagementView: React.FC = () => {
             <div className="space-y-4">
               <div className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
                 <div className="px-5 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 font-mono">Appraisal Cycles Registry</h3>
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 font-mono">
+                    Appraisal Cycles Registry
+                  </h3>
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    {cycles.length} cycles
+                  </span>
                 </div>
-                
-                <div className="overflow-x-auto select-text">
-                  <table className="w-full text-left font-sans text-xs">
-                    <thead>
-                      <tr className="bg-slate-100 text-slate-600 uppercase tracking-wider border-b border-slate-205 text-[10px] font-bold">
-                        <th className="px-5 py-3">Cycle Name</th>
-                        <th className="px-4 py-3">Type</th>
-                        <th className="px-4 py-3 text-center">Year</th>
-                        <th className="px-4 py-3">Timeline</th>
-                        <th className="px-4 py-3 text-center">Peer Feedback</th>
-                        <th className="px-4 py-3">Status</th>
-                        <th className="px-5 py-3 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-150">
-                      {cycles.map((cycle) => (
-                        <tr key={cycle.id} className="hover:bg-slate-50 transition-all font-medium text-slate-700">
-                          <td className="px-5 py-4">
-                            <span className="font-bold text-slate-800 block text-xs">{cycle.name}</span>
-                            <span className="text-[10px] text-slate-400">Ratio: {cycle.weights.goals}:{100-cycle.weights.goals} Goals focus</span>
-                          </td>
-                          <td className="px-4 py-4 text-slate-505">{cycle.type}</td>
-                          <td className="px-4 py-4 text-center text-slate-505">{cycle.year}</td>
-                          <td className="px-4 py-4 font-mono text-[11px] text-slate-505">
-                            {cycle.startDate} to {cycle.endDate}
-                          </td>
-                          <td className="px-4 py-4 text-center">
-                            {currentUser.role === 'HR' ? (
-                              <div className="flex items-center justify-center">
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                  <input
-                                    type="checkbox"
-                                    checked={cycle.peerFeedbackEnabled}
-                                    onChange={() => togglePeerFeedbackEnabled(cycle.id)}
-                                    className="sr-only peer"
-                                  />
-                                  <div className="w-8 h-4.5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-3.5 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-purple-900"></div>
-                                </label>
-                              </div>
-                            ) : (
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                cycle.peerFeedbackEnabled 
-                                  ? 'bg-purple-50 text-purple-800 border border-purple-105' 
-                                  : 'bg-slate-50 text-slate-400 border border-slate-150'
-                              }`}>
-                                {cycle.peerFeedbackEnabled ? 'Active' : 'Off'}
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-4 py-4">
-                            <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                              cycle.status === 'Active'
-                                ? 'bg-emerald-50 text-emerald-800 border border-emerald-100'
-                                : cycle.status === 'Closed'
-                                  ? 'bg-slate-100 text-slate-500 border border-slate-200'
-                                  : 'bg-amber-50 text-amber-800 border border-amber-100'
-                            }`}>
-                              {cycle.status}
-                            </span>
-                          </td>
-                          <td className="px-5 py-4 text-right">
-                            {currentUser.role === 'HR' ? (
-                              <div className="flex justify-end gap-1.5">
-                                {cycle.status === 'Draft' && (
-                                  <button
-                                    onClick={() => updateCycleStatus(cycle.id, 'Active')}
-                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2 py-1 rounded text-[10px] transition-all flex items-center gap-1 cursor-pointer"
-                                  >
-                                    <Play size={10} /> Activate
-                                  </button>
-                                )}
-                                {cycle.status === 'Active' && (
-                                  <button
-                                    onClick={() => updateCycleStatus(cycle.id, 'Closed')}
-                                    className="bg-slate-500 hover:bg-slate-650 text-white font-bold px-2 py-1 rounded text-[10px] transition-all flex items-center gap-1 cursor-pointer"
-                                  >
-                                    <Square size={10} /> Close
-                                  </button>
-                                )}
-                                {cycle.status === 'Closed' && (
-                                  <span className="text-[10px] font-mono text-slate-400 mr-2 uppercase tracking-wide">Archived</span>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="text-[10px] text-slate-400 italic">No access</span>
-                            )}
-                          </td>
+
+                {loading ? (
+                  <div className="p-8 text-center">
+                    <Loader2
+                      size={24}
+                      className="animate-spin mx-auto text-blue-600"
+                    />
+                    <p className="text-xs text-slate-400 mt-2">
+                      Loading cycles...
+                    </p>
+                  </div>
+                ) : cycles.length === 0 ? (
+                  <div className="p-8 text-center text-slate-400">
+                    <Calendar
+                      size={32}
+                      className="mx-auto text-slate-300 mb-2"
+                    />
+                    <p className="text-xs">No cycles found</p>
+                    <p className="text-[10px] mt-1">
+                      Create your first cycle to get started
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto select-text">
+                    <table className="w-full text-left font-sans text-xs">
+                      <thead>
+                        <tr className="bg-slate-100 text-slate-600 uppercase tracking-wider border-b border-slate-205 text-[10px] font-bold">
+                          <th className="px-5 py-3">Cycle Name</th>
+                          <th className="px-4 py-3">Type</th>
+                          <th className="px-4 py-3 text-center">Year</th>
+                          <th className="px-4 py-3">Timeline</th>
+                          <th className="px-4 py-3 text-center">
+                            Peer Feedback
+                          </th>
+                          <th className="px-4 py-3">Status</th>
+                          <th className="px-5 py-3 text-right">Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="divide-y divide-slate-150">
+                        {cycles.map((cycle) => (
+                          <tr
+                            key={cycle.id}
+                            className="hover:bg-slate-50 transition-all font-medium text-slate-700"
+                          >
+                            <td className="px-5 py-4">
+                              <span className="font-bold text-slate-800 block text-xs">
+                                {cycle.name}
+                              </span>
+                              <span className="text-[10px] text-slate-400">
+                                Ratio: {cycle.goalWeighting}:
+                                {100 - cycle.goalWeighting} Goals focus
+                              </span>
+                            </td>
+                            <td className="px-4 py-4 text-slate-505">
+                              {cycle.type}
+                            </td>
+                            <td className="px-4 py-4 text-center text-slate-505">
+                              {cycle.year}
+                            </td>
+                            <td className="px-4 py-4 font-mono text-[11px] text-slate-505">
+                              {cycle.startDate} to {cycle.endDate}
+                            </td>
+                            <td className="px-4 py-4 text-center">
+                              {isHR ? (
+                                <div className="flex items-center justify-center">
+                                  <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={cycle.peerFeedbackEnabled}
+                                      onChange={() => {
+                                        // TODO: Implement togglePeerFeedback
+                                        // togglePeerFeedbackEnabled(cycle.id);
+                                      }}
+                                      className="sr-only peer"
+                                    />
+                                    <div className="w-8 h-4.5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-3.5 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-purple-900"></div>
+                                  </label>
+                                </div>
+                              ) : (
+                                <span
+                                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                    cycle.peerFeedbackEnabled
+                                      ? "bg-purple-50 text-purple-800 border border-purple-105"
+                                      : "bg-slate-50 text-slate-400 border border-slate-150"
+                                  }`}
+                                >
+                                  {cycle.peerFeedbackEnabled ? "Active" : "Off"}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-4">
+                              <span
+                                className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                                  cycle.status === "Active"
+                                    ? "bg-emerald-50 text-emerald-800 border border-emerald-100"
+                                    : cycle.status === "Closed"
+                                      ? "bg-slate-100 text-slate-500 border border-slate-200"
+                                      : "bg-amber-50 text-amber-800 border border-amber-100"
+                                }`}
+                              >
+                                {cycle.status}
+                              </span>
+                            </td>
+                            <td className="px-5 py-4 text-right">
+                              {isHR ? (
+                                <div className="flex justify-end gap-1.5">
+                                  {cycle.status === "Draft" && (
+                                    <button
+                                      onClick={() =>
+                                        handleUpdateStatus(cycle.id, "Active")
+                                      }
+                                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2 py-1 rounded text-[10px] transition-all flex items-center gap-1 cursor-pointer"
+                                    >
+                                      <Play size={10} /> Activate
+                                    </button>
+                                  )}
+                                  {cycle.status === "Active" && (
+                                    <button
+                                      onClick={() =>
+                                        handleUpdateStatus(cycle.id, "Closed")
+                                      }
+                                      className="bg-slate-500 hover:bg-slate-650 text-white font-bold px-2 py-1 rounded text-[10px] transition-all flex items-center gap-1 cursor-pointer"
+                                    >
+                                      <Square size={10} /> Close
+                                    </button>
+                                  )}
+                                  {cycle.status === "Closed" && (
+                                    <span className="text-[10px] font-mono text-slate-400 mr-2 uppercase tracking-wide">
+                                      Archived
+                                    </span>
+                                  )}
+                                  {cycle.status !== "Active" && (
+                                    <button
+                                      onClick={() => handleDelete(cycle.id)}
+                                      className="text-red-600 hover:text-red-800 text-[10px] font-bold transition-colors"
+                                    >
+                                      Delete
+                                    </button>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-[10px] text-slate-400 italic">
+                                  No access
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -315,11 +580,12 @@ export const CycleManagementView: React.FC = () => {
 
         {/* Right side configuration context bars */}
         <aside className="lg:col-span-4 space-y-6">
-          {/* Static Weight Config Panel info matching the reference wireframe image */}
+          {/* Static Weight Config Panel */}
           <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
             <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
               <span className="text-xs font-bold text-slate-800 uppercase tracking-widest font-mono flex items-center gap-2">
-                <Sliders size={16} className="text-blue-900" /> Active Weights Logic
+                <Sliders size={16} className="text-blue-900" /> Active Weights
+                Logic
               </span>
             </div>
             <div className="p-4 space-y-4 text-xs">
@@ -329,9 +595,15 @@ export const CycleManagementView: React.FC = () => {
                   <span>70%</span>
                 </div>
                 <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                  <div className="bg-blue-900 h-full" style={{ width: '70%' }} />
+                  <div
+                    className="bg-blue-900 h-full"
+                    style={{ width: "70%" }}
+                  />
                 </div>
-                <p className="text-[10px] text-slate-400">Goals scored directly against dynamic key performance metrics of employee targets.</p>
+                <p className="text-[10px] text-slate-400">
+                  Goals scored directly against dynamic key performance metrics
+                  of employee targets.
+                </p>
               </div>
 
               <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 space-y-2">
@@ -340,34 +612,67 @@ export const CycleManagementView: React.FC = () => {
                   <span>30%</span>
                 </div>
                 <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                  <div className="bg-blue-400 h-full" style={{ width: '30%' }} />
+                  <div
+                    className="bg-blue-400 h-full"
+                    style={{ width: "30%" }}
+                  />
                 </div>
-                <p className="text-[10px] text-slate-400">Leadership, collaboration, communication, innovation, and general standards scores.</p>
+                <p className="text-[10px] text-slate-400">
+                  Leadership, collaboration, communication, innovation, and
+                  general standards scores.
+                </p>
               </div>
             </div>
           </div>
 
-          {/* Rating Scale card matching reference mock exactly */}
+          {/* Rating Scale card */}
           <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
             <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
               <span className="text-xs font-bold text-slate-800 uppercase tracking-widest font-mono flex items-center gap-2">
-                <Scale size={16} className="text-blue-900" /> Organizational Scale
+                <Scale size={16} className="text-blue-900" /> Organizational
+                Scale
               </span>
               <span className="bg-red-50 text-red-900 border border-red-100 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">
                 Locked
               </span>
             </div>
             <div className="p-4 space-y-2 text-xs">
-              <p className="text-[10px] text-slate-400 mb-2">Standardized 1-5 Performance scale used for multi-cohort calibration alignment exercises.</p>
+              <p className="text-[10px] text-slate-400 mb-2">
+                Standardized 1-5 Performance scale used for multi-cohort
+                calibration alignment exercises.
+              </p>
               <div className="space-y-1.5">
                 {[
-                  { val: 1, label: 'Needs Imp.', color: 'bg-red-50 text-red-900 border-red-150' },
-                  { val: 2, label: 'Meets Expectations', color: 'bg-orange-50 text-orange-900 border-orange-150' },
-                  { val: 3, label: 'Good (Exceeds)', color: 'bg-blue-50 text-blue-900 border-blue-105' },
-                  { val: 4, label: 'Superior Achievement', color: 'bg-cyan-50 text-cyan-900 border-cyan-155' },
-                  { val: 5, label: 'Distinguished Elite', color: 'bg-emerald-50 text-emerald-900 border-emerald-100' }
+                  {
+                    val: 1,
+                    label: "Needs Imp.",
+                    color: "bg-red-50 text-red-900 border-red-150",
+                  },
+                  {
+                    val: 2,
+                    label: "Meets Expectations",
+                    color: "bg-orange-50 text-orange-900 border-orange-150",
+                  },
+                  {
+                    val: 3,
+                    label: "Good (Exceeds)",
+                    color: "bg-blue-50 text-blue-900 border-blue-105",
+                  },
+                  {
+                    val: 4,
+                    label: "Superior Achievement",
+                    color: "bg-cyan-50 text-cyan-900 border-cyan-155",
+                  },
+                  {
+                    val: 5,
+                    label: "Distinguished Elite",
+                    color: "bg-emerald-50 text-emerald-900 border-emerald-100",
+                  },
                 ].map((scale) => (
-                  <div key={scale.val} className={`p-2 rounded-lg border flex items-center justify-between font-bold text-[10px] ${scale.color}`}>
+                  <div
+                    key={scale.val}
+                    className={`p-2 rounded-lg border flex items-center justify-between font-bold text-[10px] ${scale.color}`}
+                  >
                     <span>Scale {scale.val}</span>
                     <span>{scale.label}</span>
                   </div>

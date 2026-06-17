@@ -1,79 +1,95 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import React, { useState } from 'react';
-import { AppProvider, useApp } from './context/AppContext';
-import { Header } from './components/Header';
-import { Sidebar } from './components/Sidebar';
-import { DashboardView } from './components/DashboardView';
-import { CycleManagementView } from './components/CycleManagementView';
-import { GoalManagementView } from './components/GoalManagementView';
-import { AppraisalWorkflowView } from './components/AppraisalWorkflowView';
-import { CalibrationView } from './components/CalibrationView';
-import { AnalyticsView } from './components/AnalyticsView';
-import { AuditLogView } from './components/AuditLogView';
-import { LoginView } from './components/LoginView';
-import { AlertTriangle, X } from 'lucide-react';
+// src/App.tsx
+import React, { useState, useEffect } from "react";
+import { DataverseProvider, useDataverse } from "./context/DataverseContext";
+import { Header } from "./components/Header";
+import { Sidebar } from "./components/Sidebar";
+import { DashboardView } from "./components/DashboardView";
+import { CycleManagementView } from "./components/CycleManagementView";
+import { GoalManagementView } from "./components/GoalManagementView";
+import { AppraisalWorkflowView } from "./components/AppraisalWorkflowView";
+import { CalibrationView } from "./components/CalibrationView";
+import { AnalyticsView } from "./components/AnalyticsView";
+import { AuditLogView } from "./components/AuditLogView";
+import { LoginView } from "./components/LoginView";
 
 function AppContent() {
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [selectedAppraisalId, setSelectedAppraisalId] = useState<string | null>(null);
-  const { currentUser, loginType } = useApp();
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [selectedAppraisalId, setSelectedAppraisalId] = useState<string | null>(
+    null,
+  );
 
-  // Reset selected appraisal when switching user accounts to stay synchronized and show their own or correct default workspace record
+  // ✅ Lấy currentUser và logout từ DataverseContext
+  const { currentUser, isAuthenticated, logout } = useDataverse();
+
+  useEffect(() => {
+    console.log("🔍 ===== APP STATE =====");
+    console.log("🔍 isAuthenticated:", isAuthenticated);
+    console.log("🔍 currentUser:", currentUser);
+    console.log("🔍 currentUser?.id:", currentUser?.id);
+    console.log("🔍 currentUser?.name:", currentUser?.name);
+    console.log("🔍 currentUser?.role:", currentUser?.role);
+    console.log("🔍 currentUser?.email:", currentUser?.email);
+    console.log("🔍 =====================");
+  }, [currentUser, isAuthenticated]);
+
+  // Reset selected appraisal when switching user
   React.useEffect(() => {
     setSelectedAppraisalId(null);
   }, [currentUser?.id]);
 
-  if (!loginType) {
+  if (!isAuthenticated || !currentUser) {
     return <LoginView />;
   }
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-slate-50 font-sans antialiased text-slate-800">
-      {/* Upper header profile, act-as toggle switcher, and indicators */}
-      <Header />
+      {/* ✅ Header nhận props */}
+      <Header user={currentUser} onLogout={logout} />
 
       <div className="flex flex-1 overflow-hidden select-none">
-        {/* Sidebar Left Navigation */}
-        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+        {/* ✅ Sidebar nhận props */}
+        <Sidebar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          user={currentUser}
+        />
 
         {/* Central scrollable workspaces area */}
         <main className="flex-1 overflow-y-auto bg-slate-50/45 pb-11 select-text">
-          {activeTab === 'dashboard' && (
-            <DashboardView 
-              setActiveTab={setActiveTab} 
-              setSelectedAppraisalId={setSelectedAppraisalId} 
-             />
-          )}
-
-          {activeTab === 'cycles' && (
-            <CycleManagementView />
-          )}
-
-          {activeTab === 'goals' && (
-            <GoalManagementView />
-          )}
-
-          {activeTab === 'appraisals' && (
-            <AppraisalWorkflowView 
-              selectedAppraisalId={selectedAppraisalId}
+          {activeTab === "dashboard" && (
+            <DashboardView
+              setActiveTab={setActiveTab}
               setSelectedAppraisalId={setSelectedAppraisalId}
+              user={currentUser} // ✅ Thêm user
             />
           )}
 
-          {activeTab === 'calibration' && (
-            <CalibrationView />
+          {activeTab === "cycles" && (
+            <CycleManagementView user={currentUser} /> // ✅ Thêm user
           )}
 
-          {activeTab === 'analytics' && (
-            <AnalyticsView />
+          {activeTab === "goals" && (
+            <GoalManagementView user={currentUser} /> // ✅ Thêm user
           )}
 
-          {activeTab === 'audits' && (
-            <AuditLogView />
+          {activeTab === "appraisals" && (
+            <AppraisalWorkflowView
+              selectedAppraisalId={selectedAppraisalId}
+              setSelectedAppraisalId={setSelectedAppraisalId}
+              user={currentUser} // ✅ Thêm user
+            />
+          )}
+
+          {activeTab === "calibration" && (
+            <CalibrationView user={currentUser} /> // ✅ Thêm user
+          )}
+
+          {activeTab === "analytics" && (
+            <AnalyticsView user={currentUser} /> // ✅ Thêm user
+          )}
+
+          {activeTab === "audits" && (
+            <AuditLogView user={currentUser} /> // ✅ Thêm user
           )}
         </main>
       </div>
@@ -83,9 +99,8 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AppProvider>
+    <DataverseProvider>
       <AppContent />
-    </AppProvider>
+    </DataverseProvider>
   );
 }
-
