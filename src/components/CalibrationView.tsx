@@ -1,7 +1,7 @@
 // src/components/CalibrationView.tsx
 import React, { useState, useEffect } from "react";
 import { useDataverse } from "@/src/context/DataverseContext";
-import { AuthUser } from "@/src/services/AuthService";
+import { AuthUser } from "@/src/generated/services/AuthService";
 import {
   TrendingUp,
   Scale,

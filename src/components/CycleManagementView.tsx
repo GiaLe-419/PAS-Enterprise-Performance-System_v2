@@ -1,6 +1,6 @@
 // src/components/CycleManagementView.tsx
 import React, { useState, useEffect } from "react";
-import { useDataverse } from "@/src/context/DataverseContext";
+import { useCycles } from "@/src/hooks/useCycles";
 import { AuthUser } from "@/src/generated/services/AuthService";
 import {
   Layers,
@@ -9,7 +9,6 @@ import {
   Play,
   Square,
   Scale,
-  Star,
   Sliders,
   Calendar,
   AlertCircle,
@@ -18,14 +17,14 @@ import {
 
 // ============ PROPS ============
 interface CycleManagementViewProps {
-  user: AuthUser; // ✅ Nhận user từ props
+  user: AuthUser;
 }
 
 // ============ COMPONENT ============
 export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
   user,
 }) => {
-  // ✅ Dùng DataverseContext
+  // ✅ Dùng hook useCycles thay vì DataverseContext
   const {
     cycles,
     loading,
@@ -34,7 +33,7 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
     createCycle,
     updateCycleStatus,
     deleteCycle,
-  } = useDataverse();
+  } = useCycles(user?.id, user?.email);
 
   const [isCreating, setIsCreating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,7 +49,6 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
   const [goalsWeight, setGoalsWeight] = useState(70);
   const [peerEnabled, setPeerEnabled] = useState(false);
 
-  // Validations
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
@@ -59,12 +57,10 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
     loadCycles();
   }, []);
 
-  // src/components/CycleManagementView.tsx
-  // Sửa hàm handleCreate
-
+  // ===== HANDLE CREATE =====
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("🔍 ===== CYCLE MANAGEMENT: handleCreate START =====");
+    console.log("🔍 CycleManagementView: handleCreate START");
 
     setErrorMsg("");
     setSuccessMsg("");
@@ -72,14 +68,12 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
 
     // Validation
     if (!name.trim()) {
-      console.warn("⚠️ Validation failed: Name is empty");
       setErrorMsg("Please enter a descriptive cycle label.");
       setIsSubmitting(false);
       return;
     }
 
     if (!startDate || !endDate) {
-      console.warn("⚠️ Validation failed: Dates are missing");
       setErrorMsg("Please select both start and end dates.");
       setIsSubmitting(false);
       return;
@@ -89,53 +83,32 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
     const end = new Date(endDate);
 
     if (start >= end) {
-      console.warn("⚠️ Validation failed: End date is before start date");
       setErrorMsg("End date must be after start date.");
       setIsSubmitting(false);
       return;
     }
 
-    const cycleData = {
-      name: name.trim(),
-      type,
-      year: Number(year),
-      startDate,
-      endDate,
-      goalWeighting: goalsWeight,
-      peerFeedbackEnabled: peerEnabled,
-    };
-
-    console.log("📤 CYCLE DATA TO CREATE:", JSON.stringify(cycleData, null, 2));
-    console.log("👤 Current user:", user);
-
     try {
-      console.log("🚀 Calling createCycle...");
-      const result = await createCycle(cycleData);
-      console.log("✅ createCycle result:", result);
+      await createCycle({
+        name: name.trim(),
+        type,
+        year: Number(year),
+        startDate,
+        endDate,
+        goalWeighting: goalsWeight,
+        peerFeedbackEnabled: peerEnabled,
+      });
 
-      // Reset form
       setIsCreating(false);
       setName("");
-      setErrorMsg("");
       setSuccessMsg("Cycle created successfully!");
-      console.log("✅ Cycle creation completed successfully!");
-
       setTimeout(() => setSuccessMsg(""), 3000);
     } catch (err) {
-      console.error("❌ ===== CREATE CYCLE ERROR IN VIEW =====");
-      console.error("❌ Error:", err);
-
-      if (err instanceof Error) {
-        console.error("❌ Error message:", err.message);
-        console.error("❌ Error stack:", err.stack);
-      }
-
       setErrorMsg(
         err instanceof Error ? err.message : "Failed to create cycle",
       );
     } finally {
       setIsSubmitting(false);
-      console.log("🔍 ===== CYCLE MANAGEMENT: handleCreate END =====");
     }
   };
 
@@ -232,7 +205,6 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
         </div>
       )}
 
-      {/* Error from context */}
       {error && !errorMsg && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4">
           <p className="text-xs text-red-700">{error}</p>
@@ -247,7 +219,6 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
 
       {/* Main setup area */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left main cycles list / or Create Form */}
         <div className="lg:col-span-8 space-y-6">
           {isCreating ? (
             <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
@@ -375,7 +346,7 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
                         className="sr-only peer"
                         disabled={isSubmitting}
                       />
-                      <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-900"></div>
+                      <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-900" />
                     </label>
                   </div>
                   <p className="text-[10px] text-slate-400 mt-1 leading-normal">
@@ -388,7 +359,7 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsCreating(false)}
-                    className="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2 px-4 rounded-lg hover:shadow-xs transition-all cursor-pointer"
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2 px-4 rounded-lg"
                     disabled={isSubmitting}
                   >
                     Cancel
@@ -400,7 +371,7 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
                   >
                     {isSubmitting ? (
                       <>
-                        <Loader2 size={16} className="animate-spin" />
+                        <Loader2 size={16} className="animate-spin" />{" "}
                         Creating...
                       </>
                     ) : (
@@ -490,13 +461,10 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
                                     <input
                                       type="checkbox"
                                       checked={cycle.peerFeedbackEnabled}
-                                      onChange={() => {
-                                        // TODO: Implement togglePeerFeedback
-                                        // togglePeerFeedbackEnabled(cycle.id);
-                                      }}
+                                      onChange={() => {}}
                                       className="sr-only peer"
                                     />
-                                    <div className="w-8 h-4.5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-3.5 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-purple-900"></div>
+                                    <div className="w-8 h-4.5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-3.5 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-purple-900" />
                                   </label>
                                 </div>
                               ) : (
@@ -580,7 +548,6 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
 
         {/* Right side configuration context bars */}
         <aside className="lg:col-span-4 space-y-6">
-          {/* Static Weight Config Panel */}
           <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
             <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
               <span className="text-xs font-bold text-slate-800 uppercase tracking-widest font-mono flex items-center gap-2">
@@ -625,7 +592,6 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
             </div>
           </div>
 
-          {/* Rating Scale card */}
           <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
             <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
               <span className="text-xs font-bold text-slate-800 uppercase tracking-widest font-mono flex items-center gap-2">
