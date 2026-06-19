@@ -1,4 +1,15 @@
 // src/components/DashboardView.tsx
+// ============================================================
+// MÀN HÌNH TỔNG QUAN (DASHBOARD)
+// ============================================================
+// Mục đích: Hiển thị tổng quan hệ thống và các task cần xử lý
+// - Thông tin user và cycle hiện tại
+// - Thống kê workflow
+// - Các KPI chính
+// - Các task pending theo role
+// - Cảnh báo hệ thống
+// ============================================================
+
 import React, { useState, useMemo } from "react";
 import { useDataverse } from "@/src/context/DataverseContext";
 import { AuthUser } from "@/src/services/AuthService";
@@ -22,34 +33,41 @@ import {
   Settings,
 } from "lucide-react";
 
-// ============ TYPES ============
+// ============================================================
+// ĐỊNH NGHĨA PROPS
+// ============================================================
 interface DashboardViewProps {
   setActiveTab: (tab: string) => void;
   setSelectedAppraisalId: (id: string | null) => void;
-  user: AuthUser; // ✅ Nhận user từ props
+  user: AuthUser; // Người dùng hiện tại
 }
 
-// ============ COMPONENT ============
+// ============================================================
+// COMPONENT CHÍNH
+// ============================================================
 export const DashboardView: React.FC<DashboardViewProps> = ({
   setActiveTab,
   setSelectedAppraisalId,
   user,
 }) => {
-  // ✅ Dùng DataverseContext
+  // Lấy dữ liệu từ DataverseContext
   const {
     cycles,
-    // TODO: Thêm appraisals, users vào DataverseContext
+    // TODO: Thêm appraisals, users khi có
     // appraisals,
     // users,
-    // activeCycle,
   } = useDataverse();
 
-  // ===== TẠM THỜI: Mock data để UI không bị lỗi =====
+  console.log("DashboardView - User:", user.name, "Role:", user.role);
+
+  // ===== TẠM THỜI: MOCK DATA =====
   // TODO: Thay bằng dữ liệu thật từ DataverseContext
   const mockUsers: AuthUser[] = [user];
   const mockAppraisals: any[] = [];
-  const mockActiveCycle = cycles.find((c) => c.status === "Active");
+  const safeCycles = cycles || [];
+  const mockActiveCycle = safeCycles.find((c) => c.status === "Active") || null;
 
+  // ===== STATE =====
   const [showOnlyMyWorkflow, setShowOnlyMyWorkflow] = useState(true);
 
   // ===== FILTER APPRAISALS =====
@@ -104,7 +122,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     .map((a) => mockUsers.find((u) => u.id === a.employeeId))
     .filter((emp): emp is NonNullable<typeof emp> => !!emp);
 
-  // ===== GET USER TASKS =====
+  // ===== TASKS =====
   const getUserTasks = () => {
     const tasks: any[] = [];
 
@@ -130,6 +148,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             id: "t_self_app",
             title: "Complete and Submit Self-Appraisal",
             desc: "Outline your strengths, development opportunities, and blockers for H1.",
+            tab: "appraisals",
+            appraisalId: myAppraisal.id,
+            priority: "Critical",
+          });
+        } else if (
+          myAppraisal.currentStage === "SignOff" &&
+          !myAppraisal.signOff?.employeeSigned
+        ) {
+          tasks.push({
+            id: "t_signoff",
+            title: "Complete Digital Sign-off",
+            desc: "Review your calibrated evaluation report, provide final reflections, and sign.",
             tab: "appraisals",
             appraisalId: myAppraisal.id,
             priority: "Critical",
@@ -173,7 +203,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
     // HR tasks
     if (user.role === "HR") {
-      const draftCycles = cycles.filter((c) => c.status === "Draft");
+      const draftCycles = safeCycles.filter((c) => c.status === "Draft");
       if (draftCycles.length > 0) {
         tasks.push({
           id: "t_hr_p",
@@ -198,15 +228,39 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       }
     }
 
+    // SeniorManager tasks
+    if (user.role === "SeniorManager") {
+      mockAppraisals.forEach((subApp) => {
+        if (
+          subApp.cycleId === mockActiveCycle?.id &&
+          subApp.currentStage === "SignOff" &&
+          subApp.signOff?.employeeSigned &&
+          !subApp.signOff?.managerSigned
+        ) {
+          const subUser = mockUsers.find((u) => u.id === subApp.employeeId);
+          tasks.push({
+            id: `t_sl_seal_${subApp.id}`,
+            title: `Executive Sealing: ${subUser?.name || "Employee"}`,
+            desc: `Review final validated metrics, affix Executive digital seal and formally close appraisal package.`,
+            tab: "appraisals",
+            appraisalId: subApp.id,
+            priority: "Critical",
+          });
+        }
+      });
+    }
+
     return tasks;
   };
 
   const currentTasks = getUserTasks();
 
-  // ===== RENDER =====
+  // ============================================================
+  // RENDER
+  // ============================================================
   return (
     <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6 font-sans">
-      {/* Top Welcome Title Banner */}
+      {/* ===== WELCOME BANNER ===== */}
       <div className="bg-slate-900 text-white rounded-xl p-6 shadow-sm border border-slate-800 relative overflow-hidden">
         <div className="absolute top-0 right-0 p-8 opacity-10 filter blur-[1px]">
           <Briefcase size={220} className="text-white" />
@@ -237,7 +291,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* Critical Alert Banner */}
+      {/* ===== CRITICAL ALERT BANNER ===== */}
       {currentTasks.length > 0 && (
         <div
           onClick={() => {
@@ -261,6 +315,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 Bạn có {currentTasks.length} tác vụ đang chờ xử lý trong chu kỳ
                 hiện tại.
               </p>
+              <p className="text-[11px] text-indigo-50 opacity-80 uppercase font-mono tracking-tighter">
+                Status: {currentTasks.length} Pending Assignments detected in
+                Matrix Workbench.
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -275,48 +333,66 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       )}
 
-      {/* Workflow Stats Bento Grid */}
+      {/* ===== WORKFLOW STATS ===== */}
       <section className="space-y-3">
         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 font-mono">
           Workflow Status Funnel
         </h3>
-        <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-          {[
-            { label: "Goal Setup", value: stageStats.GoalSetup },
-            { label: "Self Appr.", value: stageStats.SelfAppraisal },
-            { label: "Mgr Appr.", value: stageStats.ManagerAppraisal },
-            { label: "Calibration", value: stageStats.Calibration },
-            { label: "Sign-Off", value: stageStats.SignOff },
-            { label: "Completed", value: stageStats.Completed },
-          ].map((stat, i) => (
-            <div
-              key={i}
-              className={`bg-white p-4 rounded-xl border border-slate-200 text-center shadow-xs ${
-                stat.label === "Completed"
-                  ? "bg-emerald-50/20 border-emerald-100"
-                  : ""
-              }`}
-            >
-              <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">
-                {stat.label}
-              </p>
-              <p
-                className={`text-2xl font-bold mt-1 ${
-                  stat.label === "Completed"
-                    ? "text-emerald-800"
-                    : stat.label === "Sign-Off"
-                      ? "text-blue-900"
-                      : "text-slate-700"
-                }`}
-              >
-                {stat.value}
-              </p>
-            </div>
-          ))}
+        <div
+          className={`grid grid-cols-2 ${mockActiveCycle?.peerFeedbackEnabled ? "lg:grid-cols-6" : "lg:grid-cols-6"} gap-4`}
+        >
+          <div className="bg-white p-4 rounded-xl border border-slate-200 text-center shadow-xs">
+            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">
+              Goal Setup
+            </p>
+            <p className="text-2xl font-bold text-slate-700 mt-1">
+              {stageStats.GoalSetup}
+            </p>
+          </div>
+          <div className="bg-white p-4 rounded-xl border border-slate-200 text-center shadow-xs">
+            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">
+              Self Appr.
+            </p>
+            <p className="text-2xl font-bold text-slate-700 mt-1">
+              {stageStats.SelfAppraisal}
+            </p>
+          </div>
+          <div className="bg-white p-4 rounded-xl border border-slate-200 text-center shadow-xs">
+            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">
+              Mgr Appr.
+            </p>
+            <p className="text-2xl font-bold text-slate-700 mt-1">
+              {stageStats.ManagerAppraisal}
+            </p>
+          </div>
+          <div className="bg-white p-4 rounded-xl border border-slate-200 text-center shadow-xs">
+            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">
+              Calibration
+            </p>
+            <p className="text-2xl font-bold text-slate-700 mt-1">
+              {stageStats.Calibration}
+            </p>
+          </div>
+          <div className="bg-white p-4 rounded-xl border border-slate-200 text-center shadow-xs bg-blue-50/20 border-blue-105">
+            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">
+              Sign-Off
+            </p>
+            <p className="text-2xl font-bold text-blue-900 mt-1">
+              {stageStats.SignOff}
+            </p>
+          </div>
+          <div className="bg-white p-4 rounded-xl border border-slate-200 text-center shadow-xs bg-emerald-50/20 border-emerald-100">
+            <p className="text-[10px] text-emerald-600 uppercase font-bold tracking-widest">
+              Completed
+            </p>
+            <p className="text-2xl font-bold text-emerald-800 mt-1">
+              {stageStats.Completed}
+            </p>
+          </div>
         </div>
       </section>
 
-      {/* Dashboard KPI Section */}
+      {/* ===== KPI METRICS ===== */}
       <section className="space-y-4">
         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 font-mono">
           Dashboard Key Metrics
@@ -326,7 +402,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             { label: "Employees", value: mockUsers.length },
             {
               label: "Active Cycles",
-              value: cycles.filter((c) => c.status === "Active").length,
+              value: safeCycles.filter((c) => c.status === "Active").length,
             },
             {
               label: "Pending Reviews",
@@ -353,9 +429,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </section>
 
-      {/* Main Grid: Pending Tasks + Sidebar */}
+      {/* ===== MAIN GRID ===== */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Tasks Section */}
+        {/* ===== TASKS ===== */}
         <div className="lg:col-span-8 space-y-4">
           <div className="flex items-center justify-between border-b border-slate-200 pb-2">
             <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
@@ -378,7 +454,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           ) : (
             <div className="space-y-4">
-              {currentTasks.map((task) => {
+              {currentTasks.map((task, idx) => {
                 const isCritical = task.priority === "Critical";
                 const isHigh = task.priority === "High";
 
@@ -396,7 +472,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-3">
                         <div
-                          className={`p-2 rounded-xl border ${isCritical ? "bg-rose-700 border-rose-500" : isHigh ? "bg-amber-600 border-amber-400" : "bg-indigo-700 border-indigo-500"}`}
+                          className={`p-2 rounded-xl border ${
+                            isCritical
+                              ? "bg-rose-700 border-rose-500"
+                              : isHigh
+                                ? "bg-amber-600 border-amber-400"
+                                : "bg-indigo-700 border-indigo-500"
+                          }`}
                         >
                           <ShieldAlert size={20} className="text-white" />
                         </div>
@@ -442,8 +524,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           )}
         </div>
 
-        {/* Sidebar Panel */}
+        {/* ===== SIDEBAR PANEL ===== */}
         <aside className="lg:col-span-4 space-y-6">
+          {/* Review Parameters */}
           <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
             <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
               <span className="text-xs font-bold text-slate-800 uppercase tracking-widest font-mono">

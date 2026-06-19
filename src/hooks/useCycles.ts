@@ -1,38 +1,56 @@
 // src/hooks/useCycles.ts
+// ============================================================
+// HOOK QUẢN LÝ CHU KỲ ĐÁNH GIÁ (CYCLE)
+// ============================================================
+// Mục đích: Cung cấp các chức năng CRUD cho Cycle
+// - Load danh sách cycles từ Dataverse
+// - Tạo cycle mới (KHÔNG gán ownerid - Dataverse tự động gán)
+// - Cập nhật trạng thái (Active/Closed)
+// - Cập nhật thông tin cycle
+// - Xóa cycle
+// ============================================================
+
 import { useState, useCallback, useEffect } from "react";
 import { New_appraisalcycle1sService } from "@/src/generated/services/New_appraisalcycle1sService";
 import { New_customauditlogsService } from "@/src/generated/services/New_customauditlogsService";
 
-// ============ TYPES ============
+// ============================================================
+// ĐỊNH NGHĨA KIỂU DỮ LIỆU
+// ============================================================
 export interface Cycle {
-  id: string;
-  name: string;
-  type: "Mid-Year" | "End-Year";
-  year: number;
-  startDate: string;
-  endDate: string;
-  status: "Draft" | "Active" | "Closed";
-  goalWeighting: number;
-  peerFeedbackEnabled: boolean;
-  createdAt?: string;
+  id: string; // ID của chu kỳ
+  name: string; // Tên chu kỳ
+  type: "Mid-Year" | "End-Year"; // Loại chu kỳ
+  year: number; // Năm áp dụng
+  startDate: string; // Ngày bắt đầu
+  endDate: string; // Ngày kết thúc
+  status: "Draft" | "Active" | "Closed"; // Trạng thái
+  goalWeighting: number; // Trọng số cho Goals (phần trăm)
+  peerFeedbackEnabled: boolean; // Có bật phản hồi đồng nghiệp không
+  createdAt?: string; // Ngày tạo
 }
 
-// ============ HOOK ============
+// ============================================================
+// ĐỊNH NGHĨA HOOK
+// ============================================================
 export function useCycles(userId?: string, userEmail?: string) {
-  // ===== STATE =====
+  // State lưu danh sách cycles
   const [cycles, setCycles] = useState<Cycle[]>([]);
+
+  // State trạng thái đang tải dữ liệu
   const [loading, setLoading] = useState(false);
+
+  // State lưu thông báo lỗi
   const [error, setError] = useState<string | null>(null);
 
-  // ===== HELPERS =====
-  const getUserId = useCallback((): string => {
-    return userId || "00000000-0000-0000-0000-000000000000";
-  }, [userId]);
+  // ============================================================
+  // HÀM CHUYỂN ĐỔI DỮ LIỆU
+  // ============================================================
 
-  const getUserEmail = useCallback((): string => {
-    return userEmail || "system@example.com";
-  }, [userEmail]);
-
+  /**
+   * Chuyển đổi dữ liệu từ Dataverse sang kiểu Cycle
+   * - Đọc các field từ Dataverse và map sang định dạng UI
+   */
   const mapCycleFromDataverse = (c: any): Cycle => ({
     id: c.new_appraisalcycle1id,
     name: c.new_cyclename,
@@ -46,6 +64,9 @@ export function useCycles(userId?: string, userEmail?: string) {
     createdAt: c.createdon,
   });
 
+  /**
+   * Chuyển đổi mã trạng thái từ Dataverse sang chuỗi hiển thị
+   */
   const mapStatus = (code?: number): "Draft" | "Active" | "Closed" => {
     switch (code) {
       case 100000000:
@@ -57,6 +78,9 @@ export function useCycles(userId?: string, userEmail?: string) {
     }
   };
 
+  /**
+   * Chuyển đổi chuỗi trạng thái sang mã số cho Dataverse
+   */
   const getStatusCode = (status: string): number => {
     switch (status) {
       case "Active":
@@ -64,11 +88,27 @@ export function useCycles(userId?: string, userEmail?: string) {
       case "Closed":
         return 100000001;
       default:
-        return 100000002;
+        return 100000002; // Draft
     }
   };
 
-  // ===== AUDIT LOG =====
+  /**
+   * Lấy email người dùng
+   * - Dùng để ghi audit log
+   */
+  const getUserEmail = useCallback((): string => {
+    return userEmail || "system@example.com";
+  }, [userEmail]);
+
+  // ============================================================
+  // AUDIT LOG - GHI LOG HÀNH ĐỘNG
+  // ============================================================
+
+  /**
+   * Ghi log hành động vào bảng custom audit logs
+   * - Dùng để theo dõi các thao tác quan trọng của HR
+   * - KHÔNG gán ownerid - Dataverse tự động gán
+   */
   const logAudit = useCallback(
     async (action: string, description: string) => {
       try {
@@ -81,20 +121,26 @@ export function useCycles(userId?: string, userEmail?: string) {
           new_fieldchanged: "cycle_management",
           new_previousvalue: "",
           new_newvalue: description,
-          ownerid: getUserId(),
-          owneridtype: "systemuser",
           statecode: 0 as 0,
         });
+        console.log("Da ghi audit log:", action);
       } catch (error) {
-        console.error("Error logging audit:", error);
+        console.error("Loi ghi audit log:", error);
       }
     },
-    [getUserId, getUserEmail],
+    [getUserEmail],
   );
 
-  // ===== LOAD CYCLES =====
+  // ============================================================
+  // HÀM LOAD DANH SÁCH CYCLES
+  // ============================================================
+
+  /**
+   * Load tất cả cycles từ Dataverse
+   * - Sắp xếp theo thời gian tạo giảm dần (mới nhất lên đầu)
+   */
   const loadCycles = useCallback(async () => {
-    console.log("🔍 useCycles: Loading cycles...");
+    console.log("Dang load danh sach cycles tu Dataverse...");
     setLoading(true);
     setError(null);
 
@@ -114,33 +160,41 @@ export function useCycles(userId?: string, userEmail?: string) {
         orderBy: ["createdon desc"],
       });
 
-      console.log("📥 useCycles: Result:", result);
+      console.log("Ket qua tu Dataverse:", result);
 
       if (result.data) {
         const mappedCycles = result.data.map(mapCycleFromDataverse);
         setCycles(mappedCycles);
-        console.log("✅ useCycles: Loaded", mappedCycles.length, "cycles");
+        console.log("Da load", mappedCycles.length, "cycles thanh cong");
       } else {
         setCycles([]);
+        console.log("Khong co cycles nao trong Dataverse");
       }
     } catch (err) {
-      console.error("❌ useCycles: Error loading cycles:", err);
-      setError("Failed to load cycles");
+      console.error("Loi load cycles:", err);
+      setError("Cannot load the list of cycles. Please check your connection.");
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // ===== CREATE CYCLE =====
+  // ============================================================
+  // HÀM TẠO CYCLE MỚI
+  // ============================================================
+
+  /**
+   * Tạo một chu kỳ đánh giá mới
+   * - KHÔNG gán ownerid - Dataverse tự động gán
+   * - KHÔNG gán createdby - Dataverse tự động gán
+   * - Mặc định status = Draft
+   */
   const createCycle = useCallback(
     async (data: Omit<Cycle, "id" | "status">): Promise<Cycle> => {
-      console.log("🔍 useCycles: Creating cycle:", data);
+      console.log("Bat dau tao cycle moi:", data);
       setError(null);
 
       try {
-        const userId = getUserId();
-        console.log("👤 User ID:", userId);
-
+        // ✅ CHỈ GỬI CÁC FIELD DỮ LIỆU, KHÔNG GÁN OWNERID
         const record = {
           new_cycleid: crypto.randomUUID(),
           new_cyclename: data.name,
@@ -149,46 +203,65 @@ export function useCycles(userId?: string, userEmail?: string) {
           new_startdate: data.startDate,
           new_enddate: data.endDate,
           new_goalweighting: data.goalWeighting,
-          new_status: 100000002,
-          "createdby@odata.bind": `/systemusers(${userId})`,
+          new_status: 100000002, // Draft
+          statecode: 0 as 0,
+          // ❌ KHÔNG GÁN ownerid, createdby, modifiedby
         };
 
-        console.log("📤 Record to create:", record);
+        console.log("Record gui len Dataverse:", record);
 
         const result = await New_appraisalcycle1sService.create(record);
-        console.log("📥 Create result:", result);
+        console.log("Ket qua tao cycle:", result);
 
         if (result && result.data) {
           await loadCycles();
-          await logAudit("Cycle Created", `Created cycle: ${data.name}`);
+          await logAudit("Cycle Created", "Tao cycle moi: " + data.name);
+          console.log("Tao cycle thanh cong");
           return mapCycleFromDataverse(result.data);
         }
 
-        throw new Error("Failed to create cycle - no data returned");
+        if (result && result.error) {
+          console.error(
+            "Loi tu Dataverse:",
+            JSON.stringify(result.error, null, 2),
+          );
+          throw new Error(result.error.message || "Khong the tao cycle");
+        }
+
+        throw new Error("Khong the tao cycle - khong co du lieu tra ve");
       } catch (err) {
-        console.error("❌ useCycles: Create cycle error:", err);
-        setError(err instanceof Error ? err.message : "Failed to create cycle");
+        console.error("Loi tao cycle:", err);
+        const message =
+          err instanceof Error ? err.message : "Khong the tao cycle";
+        setError(message);
         throw err;
       }
     },
-    [loadCycles, logAudit, getUserId],
+    [loadCycles, logAudit],
   );
 
-  // ===== UPDATE STATUS =====
+  // ============================================================
+  // HÀM CẬP NHẬT TRẠNG THÁI CYCLE
+  // ============================================================
+
+  /**
+   * Cập nhật trạng thái của cycle (Active hoặc Closed)
+   * - Chỉ cho phép 1 cycle Active tại 1 thời điểm
+   */
   const updateCycleStatus = useCallback(
     async (id: string, status: "Active" | "Closed") => {
-      console.log("🔍 useCycles: Updating status:", id, "→", status);
+      console.log("Dang cap nhat status cycle", id, "thanh", status);
       setError(null);
 
       try {
-        // Check: Only one active cycle
+        // Kiểm tra nếu muốn Active, kiểm tra đã có cycle Active nào khác chưa
         if (status === "Active") {
           const activeExists = cycles.some(
             (c) => c.status === "Active" && c.id !== id,
           );
           if (activeExists) {
             throw new Error(
-              "Another cycle is already active. Please close it first.",
+              "There is already an active cycle. Please close that cycle first.",
             );
           }
         }
@@ -200,23 +273,31 @@ export function useCycles(userId?: string, userEmail?: string) {
         await loadCycles();
         await logAudit(
           "Cycle Status Changed",
-          `Cycle ${id} changed to ${status}`,
+          "Cycle " + id + " changed to status " + status,
         );
+
+        console.log("Successfully updated cycle status to", status);
       } catch (err) {
-        console.error("❌ useCycles: Update status error:", err);
-        setError(
-          err instanceof Error ? err.message : "Failed to update cycle status",
-        );
+        console.error("Error updating status:", err);
+        const message =
+          err instanceof Error ? err.message : "Cannot update cycle status";
+        setError(message);
         throw err;
       }
     },
     [cycles, loadCycles, logAudit],
   );
 
-  // ===== UPDATE CYCLE =====
+  // ============================================================
+  // HÀM CẬP NHẬT THÔNG TIN CYCLE
+  // ============================================================
+
+  /**
+   * Cập nhật thông tin của cycle (tên, ngày tháng, ...)
+   */
   const updateCycle = useCallback(
     async (id: string, data: Partial<Cycle>) => {
-      console.log("🔍 useCycles: Updating cycle:", id, data);
+      console.log("Dang cap nhat cycle", id, ":", data);
       setError(null);
 
       try {
@@ -233,66 +314,92 @@ export function useCycles(userId?: string, userEmail?: string) {
         if (data.goalWeighting !== undefined)
           updateData.new_goalweighting = data.goalWeighting;
 
-        if (Object.keys(updateData).length === 0) return;
+        if (Object.keys(updateData).length === 0) {
+          console.log("No changes detected");
+          return;
+        }
 
         await New_appraisalcycle1sService.update(id, updateData);
         await loadCycles();
-        await logAudit("Cycle Updated", `Cycle ${id} updated`);
+        await logAudit("Cycle Updated", "Updated cycle " + id);
+
+        console.log("Successfully updated cycle");
       } catch (err) {
-        console.error("❌ useCycles: Update cycle error:", err);
-        setError("Failed to update cycle");
+        console.error("Error updating cycle:", err);
+        setError("Cannot update cycle");
         throw err;
       }
     },
     [loadCycles, logAudit],
   );
 
-  // ===== DELETE CYCLE =====
+  // ============================================================
+  // HÀM XÓA CYCLE
+  // ============================================================
+
+  /**
+   * Xóa cycle (chỉ khi status không phải Active)
+   */
   const deleteCycle = useCallback(
     async (id: string) => {
-      console.log("🔍 useCycles: Deleting cycle:", id);
+      console.log("Dang xoa cycle", id);
       setError(null);
 
       try {
         const cycle = cycles.find((c) => c.id === id);
         if (cycle?.status === "Active") {
           throw new Error(
-            "Cannot delete an active cycle. Please close it first.",
+            "Cannot delete an active cycle. Please close the cycle first.",
           );
         }
 
         await New_appraisalcycle1sService.delete(id);
         await loadCycles();
-        await logAudit("Cycle Deleted", `Cycle ${id} deleted`);
+        await logAudit("Cycle Deleted", "Xoa cycle " + id);
+
+        console.log("Da xoa cycle thanh cong");
       } catch (err) {
-        console.error("❌ useCycles: Delete cycle error:", err);
-        setError(err instanceof Error ? err.message : "Failed to delete cycle");
+        console.error("Loi xoa cycle:", err);
+        const message =
+          err instanceof Error ? err.message : "Khong the xoa cycle";
+        setError(message);
         throw err;
       }
     },
     [cycles, loadCycles, logAudit],
   );
 
-  // ===== GET ACTIVE CYCLE =====
+  // ============================================================
+  // HÀM LẤY CYCLE ĐANG ACTIVE
+  // ============================================================
+
+  /**
+   * Lấy cycle đang ở trạng thái Active
+   * - Dùng để xác định cycle hiện tại cho các chức năng khác
+   */
   const getActiveCycle = useCallback(() => {
     return cycles.find((c) => c.status === "Active");
   }, [cycles]);
 
-  // ===== AUTO LOAD =====
+  // ============================================================
+  // TỰ ĐỘNG LOAD DỮ LIỆU KHI HOOK ĐƯỢC SỬ DỤNG
+  // ============================================================
   useEffect(() => {
     loadCycles();
   }, []);
 
-  // ===== RETURN =====
+  // ============================================================
+  // TRẢ VỀ CÁC HÀM VÀ DỮ LIỆU
+  // ============================================================
   return {
-    cycles,
-    loading,
-    error,
-    loadCycles,
-    createCycle,
-    updateCycleStatus,
-    updateCycle,
-    deleteCycle,
-    getActiveCycle,
+    cycles, // Danh sách cycles
+    loading, // Trạng thái đang load
+    error, // Lỗi (nếu có)
+    loadCycles, // Hàm load danh sách
+    createCycle, // Hàm tạo cycle mới
+    updateCycleStatus, // Hàm cập nhật status
+    updateCycle, // Hàm cập nhật thông tin
+    deleteCycle, // Hàm xóa cycle
+    getActiveCycle, // Hàm lấy cycle đang Active
   };
 }

@@ -1,4 +1,14 @@
 // src/components/CycleManagementView.tsx
+// ============================================================
+// MÀN HÌNH QUẢN LÝ CHU KỲ ĐÁNH GIÁ
+// ============================================================
+// Mục đích: Cho phép HR quản lý các chu kỳ đánh giá
+// - Xem danh sách cycles từ Dataverse
+// - Tạo cycle mới
+// - Active/Close cycle
+// - Xóa cycle
+// ============================================================
+
 import React, { useState, useEffect } from "react";
 import { useCycles } from "@/src/hooks/useCycles";
 import { AuthUser } from "@/src/generated/services/AuthService";
@@ -9,22 +19,29 @@ import {
   Play,
   Square,
   Scale,
+  Star,
   Sliders,
   Calendar,
   AlertCircle,
-  Loader2,
+  Trash2,
+  X,
+  AlertTriangle,
 } from "lucide-react";
 
-// ============ PROPS ============
+// ============================================================
+// ĐỊNH NGHĨA PROPS
+// ============================================================
 interface CycleManagementViewProps {
-  user: AuthUser;
+  user: AuthUser; // Người dùng hiện tại
 }
 
-// ============ COMPONENT ============
+// ============================================================
+// COMPONENT CHÍNH
+// ============================================================
 export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
   user,
 }) => {
-  // ✅ Dùng hook useCycles thay vì DataverseContext
+  // Sử dụng hook useCycles
   const {
     cycles,
     loading,
@@ -35,8 +52,17 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
     deleteCycle,
   } = useCycles(user?.id, user?.email);
 
+  // ===== STATE =====
   const [isCreating, setIsCreating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // ===== STATE CHO POPUP XÓA =====
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [cycleToDelete, setCycleToDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Form states
   const [name, setName] = useState("");
@@ -49,18 +75,69 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
   const [goalsWeight, setGoalsWeight] = useState(70);
   const [peerEnabled, setPeerEnabled] = useState(false);
 
+  // Validations
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
-  // Load cycles khi component mount
+  // ===== KIỂM TRA QUYỀN HR =====
+  const isHR = user.role === "HR" || user.role === "SeniorManager";
+
+  // ===== LOAD CYCLES =====
   useEffect(() => {
     loadCycles();
   }, []);
 
-  // ===== HANDLE CREATE =====
+  // ============================================================
+  // MỞ POPUP XÓA
+  // ============================================================
+  const openDeleteModal = (id: string, name: string) => {
+    console.log("Mo popup xoa cycle:", name);
+    setCycleToDelete({ id, name });
+    setShowDeleteModal(true);
+  };
+
+  // ============================================================
+  // ĐÓNG POPUP XÓA
+  // ============================================================
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setCycleToDelete(null);
+    setIsDeleting(false);
+  };
+
+  // ============================================================
+  // XỬ LÝ XÓA CYCLE
+  // ============================================================
+  const handleConfirmDelete = async () => {
+    if (!cycleToDelete) return;
+
+    console.log("Xoa cycle:", cycleToDelete.id);
+    setIsDeleting(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    try {
+      await deleteCycle(cycleToDelete.id);
+      setSuccessMsg("Cycle deleted successfully!");
+      console.log("Xoa cycle thanh cong");
+      closeDeleteModal();
+      setTimeout(() => setSuccessMsg(""), 3000);
+    } catch (err) {
+      console.error("Loi xoa cycle:", err);
+      setErrorMsg(
+        err instanceof Error ? err.message : "Failed to delete cycle",
+      );
+      setTimeout(() => setErrorMsg(""), 5000);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+  // ============================================================
+  // XỬ LÝ TẠO CYCLE
+  // ============================================================
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("🔍 CycleManagementView: handleCreate START");
+    console.log("Bat dau tao cycle moi tu UI");
 
     setErrorMsg("");
     setSuccessMsg("");
@@ -81,14 +158,35 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
 
     const start = new Date(startDate);
     const end = new Date(endDate);
-
     if (start >= end) {
       setErrorMsg("End date must be after start date.");
       setIsSubmitting(false);
       return;
     }
 
+    if (year < 2000 || year > 2100) {
+      setErrorMsg("Year must be between 2000 and 2100.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (goalsWeight < 0 || goalsWeight > 100) {
+      setErrorMsg("Goal weighting must be between 0 and 100.");
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
+      console.log("Du lieu cycle:", {
+        name,
+        type,
+        year,
+        startDate,
+        endDate,
+        goalsWeight,
+        peerEnabled,
+      });
+
       await createCycle({
         name: name.trim(),
         type,
@@ -99,11 +197,16 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
         peerFeedbackEnabled: peerEnabled,
       });
 
+      // Reset form
       setIsCreating(false);
       setName("");
+      setErrorMsg("");
       setSuccessMsg("Cycle created successfully!");
+      console.log("Tao cycle thanh cong");
+
       setTimeout(() => setSuccessMsg(""), 3000);
     } catch (err) {
+      console.error("Loi tao cycle:", err);
       setErrorMsg(
         err instanceof Error ? err.message : "Failed to create cycle",
       );
@@ -112,21 +215,28 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
     }
   };
 
-  // ===== HANDLE STATUS CHANGE =====
+  // ============================================================
+  // XỬ LÝ CẬP NHẬT TRẠNG THÁI
+  // ============================================================
   const handleUpdateStatus = async (
     id: string,
     status: "Active" | "Closed",
   ) => {
+    console.log("Cap nhat status cycle", id, "thanh", status);
     setErrorMsg("");
     setSuccessMsg("");
 
     try {
       await updateCycleStatus(id, status);
-      setSuccessMsg(
-        `Cycle ${status === "Active" ? "activated" : "closed"} successfully!`,
-      );
+      const message =
+        status === "Active"
+          ? "Cycle activated successfully!"
+          : "Cycle closed successfully!";
+      setSuccessMsg(message);
+      console.log(message);
       setTimeout(() => setSuccessMsg(""), 3000);
     } catch (err) {
+      console.error("Loi cap nhat status:", err);
       setErrorMsg(
         err instanceof Error ? err.message : "Failed to update cycle status",
       );
@@ -134,32 +244,30 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
     }
   };
 
-  // ===== HANDLE DELETE =====
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this cycle?")) return;
+  // ============================================================
+  // RENDER
+  // ============================================================
 
-    setErrorMsg("");
-    setSuccessMsg("");
+  // Nếu không phải HR, hiển thị thông báo không có quyền
+  if (!isHR) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+          <h3 className="text-red-800 font-bold">Access Denied</h3>
+          <p className="text-red-600 text-sm mt-1">
+            Only HR and Senior Manager can manage appraisal cycles.
+          </p>
+          <p className="text-gray-500 text-sm mt-2">
+            Your role: <strong>{user.role}</strong>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
-    try {
-      await deleteCycle(id);
-      setSuccessMsg("Cycle deleted successfully!");
-      setTimeout(() => setSuccessMsg(""), 3000);
-    } catch (err) {
-      setErrorMsg(
-        err instanceof Error ? err.message : "Failed to delete cycle",
-      );
-      setTimeout(() => setErrorMsg(""), 5000);
-    }
-  };
-
-  // Check if user is HR
-  const isHR = user.role === "HR" || user.role === "SeniorManager";
-
-  // ===== RENDER =====
   return (
     <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6 font-sans">
-      {/* Title block */}
+      {/* ===== TITLE BLOCK ===== */}
       <section className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
           <h2 className="text-xl font-bold text-slate-800 tracking-tight flex items-center gap-2">
@@ -184,42 +292,107 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
         )}
       </section>
 
-      {/* Messages */}
+      {/* ===== MESSAGES ===== */}
       {errorMsg && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-          <AlertCircle size={18} className="text-red-600 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-xs font-bold text-red-800">Error</p>
-            <p className="text-xs text-red-700">{errorMsg}</p>
-          </div>
+        <div className="bg-red-50 text-red-800 p-3 rounded-lg border border-red-100 flex items-center gap-2 text-xs">
+          <AlertCircle size={16} className="text-red-700" /> {errorMsg}
         </div>
       )}
-
       {successMsg && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-start gap-3">
-          <Check size={18} className="text-emerald-600 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-xs font-bold text-emerald-800">Success</p>
-            <p className="text-xs text-emerald-700">{successMsg}</p>
-          </div>
+        <div className="bg-emerald-50 text-emerald-800 p-3 rounded-lg border border-emerald-100 flex items-center gap-2 text-xs">
+          <Check size={16} className="text-emerald-700" /> {successMsg}
         </div>
       )}
-
       {error && !errorMsg && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-          <p className="text-xs text-red-700">{error}</p>
+        <div className="bg-red-50 text-red-800 p-3 rounded-lg border border-red-100 flex items-center gap-2 text-xs">
+          <AlertCircle size={16} className="text-red-700" /> {error}
           <button
             onClick={loadCycles}
-            className="mt-2 text-xs text-blue-600 hover:text-blue-800 font-bold"
+            className="ml-auto text-blue-600 hover:text-blue-800 font-bold"
           >
             Retry
           </button>
         </div>
       )}
+      {showDeleteModal && cycleToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="bg-red-50 border-b border-red-100 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-red-100 p-2 rounded-lg">
+                  <AlertTriangle size={20} className="text-red-600" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-800">
+                  Confirm Deletion
+                </h3>
+              </div>
+              <button
+                onClick={closeDeleteModal}
+                className="text-slate-400 hover:text-slate-600 transition-colors rounded-lg p-1 hover:bg-slate-100"
+                disabled={isDeleting}
+              >
+                <X size={20} />
+              </button>
+            </div>
 
-      {/* Main setup area */}
+            {/* Body */}
+            <div className="px-6 py-4">
+              <p className="text-sm text-slate-600">
+                Are you sure you want to delete this appraisal cycle?
+              </p>
+              <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <p className="text-sm font-medium text-slate-800">
+                  {cycleToDelete.name}
+                </p>
+                <p className="text-xs text-slate-500 mt-1">
+                  This action cannot be undone. All related data will be
+                  permanently removed.
+                </p>
+              </div>
+
+              {errorMsg && (
+                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-xs text-red-700">{errorMsg}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
+              <button
+                onClick={closeDeleteModal}
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="px-4 py-2 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isDeleting ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={16} />
+                    Delete Cycle
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ===== MAIN SETUP AREA ===== */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* ===== LEFT COLUMN ===== */}
         <div className="lg:col-span-8 space-y-6">
+          {/* ===== CREATE FORM ===== */}
           {isCreating ? (
             <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
               <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 font-mono">
@@ -301,7 +474,7 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
                   </div>
                 </div>
 
-                {/* Score Config rule weights */}
+                {/* Score Config */}
                 <div className="space-y-2 bg-slate-50 border border-slate-200 rounded-lg p-4">
                   <div className="flex justify-between items-center mb-1">
                     <span className="font-bold text-slate-700">
@@ -332,7 +505,7 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
                   </p>
                 </div>
 
-                {/* Peer feedback config block */}
+                {/* Peer Feedback */}
                 <div className="space-y-2 bg-slate-50 border border-slate-200 rounded-lg p-4">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-slate-700">
@@ -346,7 +519,7 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
                         className="sr-only peer"
                         disabled={isSubmitting}
                       />
-                      <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-900" />
+                      <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-900"></div>
                     </label>
                   </div>
                   <p className="text-[10px] text-slate-400 mt-1 leading-normal">
@@ -359,7 +532,7 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsCreating(false)}
-                    className="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2 px-4 rounded-lg"
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2 px-4 rounded-lg hover:shadow-xs transition-all cursor-pointer"
                     disabled={isSubmitting}
                   >
                     Cancel
@@ -367,21 +540,17 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="bg-blue-900 hover:bg-blue-800 text-white font-bold py-2 px-5 rounded-lg shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="bg-blue-900 hover:bg-blue-800 text-white font-bold py-2 px-5 rounded-lg shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 size={16} className="animate-spin" />{" "}
-                        Creating...
-                      </>
-                    ) : (
-                      "Activate Templates and Save"
-                    )}
+                    {isSubmitting
+                      ? "Creating..."
+                      : "Activate Templates and Save"}
                   </button>
                 </div>
               </form>
             </div>
           ) : (
+            /* ===== CYCLES LIST ===== */
             <div className="space-y-4">
               <div className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
                 <div className="px-5 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
@@ -394,14 +563,8 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
                 </div>
 
                 {loading ? (
-                  <div className="p-8 text-center">
-                    <Loader2
-                      size={24}
-                      className="animate-spin mx-auto text-blue-600"
-                    />
-                    <p className="text-xs text-slate-400 mt-2">
-                      Loading cycles...
-                    </p>
+                  <div className="p-8 text-center text-slate-400">
+                    Loading cycles...
                   </div>
                 ) : cycles.length === 0 ? (
                   <div className="p-8 text-center text-slate-400">
@@ -461,10 +624,13 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
                                     <input
                                       type="checkbox"
                                       checked={cycle.peerFeedbackEnabled}
-                                      onChange={() => {}}
+                                      onChange={() => {
+                                        // TODO: Implement togglePeerFeedback
+                                        // togglePeerFeedbackEnabled(cycle.id);
+                                      }}
                                       className="sr-only peer"
                                     />
-                                    <div className="w-8 h-4.5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-3.5 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-purple-900" />
+                                    <div className="w-8 h-4.5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-3.5 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-purple-900"></div>
                                   </label>
                                 </div>
                               ) : (
@@ -522,7 +688,9 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
                                   )}
                                   {cycle.status !== "Active" && (
                                     <button
-                                      onClick={() => handleDelete(cycle.id)}
+                                      onClick={() =>
+                                        openDeleteModal(cycle.id, cycle.name)
+                                      }
                                       className="text-red-600 hover:text-red-800 text-[10px] font-bold transition-colors"
                                     >
                                       Delete
@@ -546,8 +714,9 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
           )}
         </div>
 
-        {/* Right side configuration context bars */}
+        {/* ===== RIGHT SIDEBAR ===== */}
         <aside className="lg:col-span-4 space-y-6">
+          {/* Weight Config */}
           <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
             <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
               <span className="text-xs font-bold text-slate-800 uppercase tracking-widest font-mono flex items-center gap-2">
@@ -592,6 +761,7 @@ export const CycleManagementView: React.FC<CycleManagementViewProps> = ({
             </div>
           </div>
 
+          {/* Rating Scale */}
           <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
             <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
               <span className="text-xs font-bold text-slate-800 uppercase tracking-widest font-mono flex items-center gap-2">

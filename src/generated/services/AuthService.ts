@@ -1,9 +1,20 @@
 // src/services/AuthService.ts
+// ============================================================
+// DỊCH VỤ XÁC THỰC - PHIÊN BẢN ĐƠN GIẢN (KHÔNG MÃ HÓA)
+// ============================================================
+// LƯU Ý: Đây là phiên bản dành cho giai đoạn phát triển
+// Sau này sẽ nâng cấp lên bcrypt
+// ============================================================
+
 import { New_employeesprofilesService } from "@/src/generated/services/New_employeesprofilesService";
 
+// ============================================================
+// ĐỊNH NGHĨA KIỂU DỮ LIỆU
+// ============================================================
 export interface AuthUser {
   id: string;
   name: string;
+  appUsername: string;
   email: string;
   role: "Employee" | "Manager" | "HR" | "SeniorManager";
   department: string;
@@ -16,95 +27,145 @@ export interface LoginResult {
   error?: string;
 }
 
+// ============================================================
+// LỚP DỊCH VỤ XÁC THỰC
+// ============================================================
 export class AuthService {
   private static currentUser: AuthUser | null = null;
 
-  static async login(username: string, password: string): Promise<LoginResult> {
+  // ============================================================
+  // HÀM ĐĂNG NHẬP (SO SÁNH PLAIN TEXT)
+  // ============================================================
+  static async login(
+    appUsername: string,
+    password: string,
+  ): Promise<LoginResult> {
+    console.log("Dang nhap voi username:", appUsername);
+
     try {
-      // 1. Tìm user trong Dataverse
+      // Tìm user theo appUsername
       const result = await New_employeesprofilesService.getAll({
-        filter: `new_username eq '${username.trim()}'`,
+        filter: `new_appusername eq '${appUsername.trim()}'`,
         select: [
           "new_employeesprofileid",
           "new_username",
+          "new_appusername",
           "new_email",
           "new_department",
           "new_role",
           "_new_manager_value",
           "new_apppassword",
+          "statecode",
         ],
       });
 
       if (!result.data || result.data.length === 0) {
-        return { success: false, error: "Tài khoản không tồn tại." };
+        return {
+          success: false,
+          error: "Tai khoan khong ton tai.",
+        };
       }
 
       const userData = result.data[0];
 
-      // 2. Kiểm tra password (tạm thời so sánh plain text)
-      // Sau này sẽ dùng bcrypt.compare()
-      if (userData.new_apppassword !== password) {
-        return { success: false, error: "Mật khẩu không đúng." };
+      // Kiểm tra tài khoản bị khóa
+      if (userData.statecode === 1) {
+        return {
+          success: false,
+          error: "Tai khoan da bi khoa. Vui long lien he HR.",
+        };
       }
 
-      // 3. Map user
+      // // SO SÁNH MẬT KHẨU PLAIN TEXT (TẠM THỜI)
+      // // Sau này sẽ thay bằng bcrypt.compare()
+      if (userData.new_apppassword !== password) {
+        console.log("Mat khau khong dung");
+        return {
+          success: false,
+          error: "Mat khau khong dung. Vui long thu lai.",
+        };
+      }
+
+      // Tạo AuthUser
       const authUser: AuthUser = {
         id: userData.new_employeesprofileid,
         name: userData.new_username,
+        appUsername: userData.new_appusername || userData.new_username,
         email: userData.new_email || "",
-        role: mapRole(userData.new_role),
+        role: this.mapRole(userData.new_role),
         department: userData.new_department || "",
         managerId: userData._new_manager_value || undefined,
       };
 
-      // 4. Lưu user
+      // Lưu session
       AuthService.currentUser = authUser;
-
-      // 5. Lưu vào localStorage để giữ session
       localStorage.setItem("pas_user", JSON.stringify(authUser));
 
-      return { success: true, user: authUser };
+      console.log("Dang nhap thanh cong cho user:", authUser.name);
+
+      return {
+        success: true,
+        user: authUser,
+      };
     } catch (error) {
-      console.error("Login error:", error);
-      return { success: false, error: "Lỗi kết nối đến hệ thống." };
+      console.error("Loi dang nhap:", error);
+      return {
+        success: false,
+        error: "Loi ket noi den he thong.",
+      };
     }
   }
 
-  static logout(): void {
-    AuthService.currentUser = null;
-    localStorage.removeItem("pas_user");
+  // ============================================================
+  // HÀM CHUYỂN ĐỔI VAI TRÒ
+  // ============================================================
+  private static mapRole(code?: number): AuthUser["role"] {
+    switch (code) {
+      case 100000001:
+        return "Manager";
+      case 100000002:
+        return "HR";
+      case 100000003:
+        return "SeniorManager";
+      default:
+        return "Employee";
+    }
   }
 
+  // ============================================================
+  // HÀM LẤY USER HIỆN TẠI
+  // ============================================================
   static getCurrentUser(): AuthUser | null {
-    if (AuthService.currentUser) return AuthService.currentUser;
+    if (AuthService.currentUser) {
+      return AuthService.currentUser;
+    }
 
-    // Thử load từ localStorage
-    const stored = localStorage.getItem("pas_user");
-    if (stored) {
-      try {
+    try {
+      const stored = localStorage.getItem("pas_user");
+      if (stored) {
         AuthService.currentUser = JSON.parse(stored);
         return AuthService.currentUser;
-      } catch {
-        return null;
       }
+    } catch (error) {
+      console.error("Loi load user tu localStorage:", error);
     }
+
     return null;
   }
 
+  // ============================================================
+  // HÀM ĐĂNG XUẤT
+  // ============================================================
+  static logout(): void {
+    AuthService.currentUser = null;
+    localStorage.removeItem("pas_user");
+    console.log("Da dang xuat");
+  }
+
+  // ============================================================
+  // HÀM KIỂM TRA ĐÃ ĐĂNG NHẬP
+  // ============================================================
   static isAuthenticated(): boolean {
     return AuthService.getCurrentUser() !== null;
-  }
-}
-
-function mapRole(code?: number): AuthUser["role"] {
-  switch (code) {
-    case 100000001:
-      return "Manager";
-    case 100000002:
-      return "HR";
-    case 100000003:
-      return "SeniorManager";
-    default:
-      return "Employee";
   }
 }
