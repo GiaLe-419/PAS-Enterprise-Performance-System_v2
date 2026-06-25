@@ -1,14 +1,14 @@
 {
-  "name": "new_performanceappraisal",
-  "title": "PerformanceAppraisals",
+  "name": "new_department1",
+  "title": "Departments",
   "schema": {
     "type": "array",
     "items": {
       "type": "object",
       "x-ms-dataverse-entity": true,
-      "x-ms-dataverse-entityset": "new_performanceappraisals",
-      "x-ms-dataverse-primary-id": "new_performanceappraisalid",
-      "x-ms-dataverse-primary-name": "new_appraisalid",
+      "x-ms-dataverse-entityset": "new_department1s",
+      "x-ms-dataverse-primary-id": "new_department1id",
+      "x-ms-dataverse-primary-name": "new_departmentname",
       "properties": {
         "createdby": {
           "type": "string",
@@ -141,309 +141,40 @@
           "required": true,
           "maxLength": 100
         },
-        "new_appraisalid": {
+        "new_department1id": {
           "type": "string",
-          "title": "AppraisalID",
-          "x-ms-dataverse-attribute": "new_appraisalid",
-          "x-ms-dataverse-type": "StringType",
-          "x-ms-schema-name": "new_AppraisalID",
-          "x-ms-dataverse-primary-name": true,
+          "title": "Department",
+          "x-ms-dataverse-attribute": "new_department1id",
+          "x-ms-dataverse-type": "UniqueidentifierType",
+          "x-ms-schema-name": "new_Department1Id",
+          "x-ms-dataverse-primary-id": true,
           "required": true,
-          "maxLength": 850
+          "x-ms-keyType": "primary"
         },
-        "new_appraisalname": {
+        "new_departmentid": {
           "type": "string",
-          "title": "Appraisal Name",
-          "x-ms-dataverse-attribute": "new_appraisalname",
+          "title": "DepartmentID",
+          "x-ms-dataverse-attribute": "new_departmentid",
           "x-ms-dataverse-type": "StringType",
-          "x-ms-schema-name": "new_AppraisalName",
-          "required": true,
+          "x-ms-schema-name": "new_DepartmentID",
           "maxLength": 100
-        },
-        "new_blockers": {
-          "type": "string",
-          "title": "Blockers",
-          "x-ms-dataverse-attribute": "new_blockers",
-          "x-ms-dataverse-type": "StringType",
-          "x-ms-schema-name": "new_Blockers",
-          "maxLength": 100
-        },
-        "new_calibrationclosedat1": {
-          "type": "string",
-          "title": "CalibrationClosedAt",
-          "x-ms-dataverse-attribute": "new_calibrationclosedat1",
-          "x-ms-dataverse-type": "DateTimeType",
-          "x-ms-schema-name": "new_CalibrationClosedAt1"
-        },
-        "new_cycleid": {
-          "type": "string",
-          "title": "CycleID",
-          "x-ms-dataverse-attribute": "new_cycleid",
-          "x-ms-dataverse-type": "LookupType",
-          "x-ms-schema-name": "new_CycleID"
-        },
-        "new_cycleidname": {
-          "type": "string",
-          "title": "new_cycleidname",
-          "x-ms-dataverse-attribute": "new_cycleidname",
-          "x-ms-dataverse-type": "StringType",
-          "x-ms-schema-name": "new_CycleIDName",
-          "x-ms-read-only": true,
-          "maxLength": 850
         },
         "new_departmentname": {
           "type": "string",
           "title": "DepartmentName",
           "x-ms-dataverse-attribute": "new_departmentname",
-          "x-ms-dataverse-type": "LookupType",
-          "x-ms-schema-name": "new_DepartmentName"
-        },
-        "new_departmentnamename": {
-          "type": "string",
-          "title": "new_departmentnamename",
-          "x-ms-dataverse-attribute": "new_departmentnamename",
           "x-ms-dataverse-type": "StringType",
-          "x-ms-schema-name": "new_DepartmentNameName",
-          "x-ms-read-only": true,
-          "maxLength": 850
-        },
-        "new_employee": {
-          "type": "string",
-          "title": "EmployeeName",
-          "x-ms-dataverse-attribute": "new_employee",
-          "x-ms-dataverse-type": "LookupType",
-          "x-ms-schema-name": "new_Employee"
-        },
-        "new_employeeid": {
-          "type": "string",
-          "title": "EmployeeID",
-          "x-ms-dataverse-attribute": "new_employeeid",
-          "x-ms-dataverse-type": "LookupType",
-          "x-ms-schema-name": "new_EmployeeID"
-        },
-        "new_employeeidname": {
-          "type": "string",
-          "title": "new_employeeidname",
-          "x-ms-dataverse-attribute": "new_employeeidname",
-          "x-ms-dataverse-type": "StringType",
-          "x-ms-schema-name": "new_EmployeeIDName",
-          "x-ms-read-only": true,
-          "maxLength": 850
-        },
-        "new_employeename": {
-          "type": "string",
-          "title": "new_employeename",
-          "x-ms-dataverse-attribute": "new_employeename",
-          "x-ms-dataverse-type": "StringType",
-          "x-ms-schema-name": "new_EmployeeName",
-          "x-ms-read-only": true,
-          "maxLength": 850
-        },
-        "new_employeerebuttal": {
-          "type": "string",
-          "title": "EmployeeRebuttal",
-          "x-ms-dataverse-attribute": "new_employeerebuttal",
-          "x-ms-dataverse-type": "StringType",
-          "x-ms-schema-name": "new_EmployeeRebuttal",
-          "maxLength": 100
-        },
-        "new_employeesignatureurl": {
-          "type": "string",
-          "title": "EmployeeSignatureURL",
-          "x-ms-dataverse-attribute": "new_employeesignatureurl",
-          "x-ms-dataverse-type": "StringType",
-          "x-ms-schema-name": "new_EmployeeSignatureURL",
-          "maxLength": 100
-        },
-        "new_employeesignedat": {
-          "type": "string",
-          "title": "EmployeeSignedAt",
-          "x-ms-dataverse-attribute": "new_employeesignedat",
-          "x-ms-dataverse-type": "DateTimeType",
-          "x-ms-schema-name": "new_EmployeeSignedAt"
-        },
-        "new_employeesubmittedat": {
-          "type": "string",
-          "title": "EmployeeSubmittedAt",
-          "x-ms-dataverse-attribute": "new_employeesubmittedat",
-          "x-ms-dataverse-type": "DateTimeType",
-          "x-ms-schema-name": "new_EmployeeSubmittedAt"
-        },
-        "new_finalscore": {
-          "type": "string",
-          "title": "FinalScore",
-          "x-ms-dataverse-attribute": "new_finalscore",
-          "x-ms-dataverse-type": "DecimalType",
-          "x-ms-schema-name": "new_FinalScore"
-        },
-        "new_ishroverridden": {
-          "type": "string",
-          "title": "IsHROverridden",
-          "x-ms-dataverse-attribute": "new_ishroverridden",
-          "x-ms-dataverse-type": "BooleanType",
-          "x-ms-schema-name": "new_IsHROverridden",
-          "enum": [
-            "No",
-            "Yes"
-          ],
-          "x-ms-enum-values": [
-            0,
-            1
-          ],
-          "Color": [
-            null,
-            null
-          ],
-          "x-ms-optionsetmetadataid": "01887ab1-0a6f-f111-ab0f-000d3ac8ad4d",
-          "x-ms-isGlobal": false,
-          "x-ms-optionsetdisplayname": "IsHROverridden",
-          "x-ms-optionSetType": "Boolean"
-        },
-        "new_ishroverriddenname": {
-          "type": "string",
-          "title": "new_ishroverriddenname",
-          "x-ms-dataverse-attribute": "new_ishroverriddenname",
-          "x-ms-dataverse-type": "VirtualType",
-          "x-ms-schema-name": "new_ishroverriddenName",
-          "x-ms-read-only": true
-        },
-        "new_managerjustification": {
-          "type": "string",
-          "title": "ManagerJustification",
-          "x-ms-dataverse-attribute": "new_managerjustification",
-          "x-ms-dataverse-type": "StringType",
-          "x-ms-schema-name": "new_ManagerJustification",
-          "maxLength": 100
-        },
-        "new_managersignatureurl": {
-          "type": "string",
-          "title": "ManagerSignatureURL",
-          "x-ms-dataverse-attribute": "new_managersignatureurl",
-          "x-ms-dataverse-type": "StringType",
-          "x-ms-schema-name": "new_ManagerSignatureURL",
-          "maxLength": 100
-        },
-        "new_managersignedat": {
-          "type": "string",
-          "title": "ManagerSignedAt",
-          "x-ms-dataverse-attribute": "new_managersignedat",
-          "x-ms-dataverse-type": "DateTimeType",
-          "x-ms-schema-name": "new_ManagerSignedAt"
-        },
-        "new_managersubmittedat": {
-          "type": "string",
-          "title": "ManagerSubmittedAt",
-          "x-ms-dataverse-attribute": "new_managersubmittedat",
-          "x-ms-dataverse-type": "DateTimeType",
-          "x-ms-schema-name": "new_ManagerSubmittedAt"
-        },
-        "new_opportunities": {
-          "type": "string",
-          "title": "Opportunities",
-          "x-ms-dataverse-attribute": "new_opportunities",
-          "x-ms-dataverse-type": "StringType",
-          "x-ms-schema-name": "new_Opportunities",
-          "maxLength": 100
-        },
-        "new_performanceappraisalid": {
-          "type": "string",
-          "title": "PerformanceAppraisal",
-          "x-ms-dataverse-attribute": "new_performanceappraisalid",
-          "x-ms-dataverse-type": "UniqueidentifierType",
-          "x-ms-schema-name": "new_PerformanceAppraisalId",
-          "x-ms-dataverse-primary-id": true,
+          "x-ms-schema-name": "new_DepartmentName",
+          "x-ms-dataverse-primary-name": true,
           "required": true,
-          "x-ms-keyType": "primary"
+          "maxLength": 850
         },
-        "new_ratingcategory": {
+        "new_id": {
           "type": "string",
-          "title": "RatingCategory",
-          "x-ms-dataverse-attribute": "new_ratingcategory",
-          "x-ms-dataverse-type": "StringType",
-          "x-ms-schema-name": "new_RatingCategory",
-          "maxLength": 100
-        },
-        "new_ratinginflationflag": {
-          "type": "string",
-          "title": "RatingInflationFlag",
-          "x-ms-dataverse-attribute": "new_ratinginflationflag",
-          "x-ms-dataverse-type": "BooleanType",
-          "x-ms-schema-name": "new_RatingInflationFlag",
-          "enum": [
-            "False",
-            "True"
-          ],
-          "x-ms-enum-values": [
-            0,
-            1
-          ],
-          "Color": [
-            null,
-            null
-          ],
-          "x-ms-optionsetmetadataid": "f8223cc2-d664-f111-ab0d-7ced8db5944a",
-          "x-ms-isGlobal": false,
-          "x-ms-optionsetdisplayname": "RatingInflationFlag",
-          "x-ms-optionSetType": "Boolean"
-        },
-        "new_ratinginflationflagname": {
-          "type": "string",
-          "title": "new_ratinginflationflagname",
-          "x-ms-dataverse-attribute": "new_ratinginflationflagname",
-          "x-ms-dataverse-type": "VirtualType",
-          "x-ms-schema-name": "new_ratinginflationflagName",
-          "x-ms-read-only": true
-        },
-        "new_strengths": {
-          "type": "string",
-          "title": "Strengths",
-          "x-ms-dataverse-attribute": "new_strengths",
-          "x-ms-dataverse-type": "StringType",
-          "x-ms-schema-name": "new_Strengths",
-          "maxLength": 100
-        },
-        "new_workflowstatus": {
-          "type": "string",
-          "title": "WorkflowStatus",
-          "x-ms-dataverse-attribute": "new_workflowstatus",
-          "x-ms-dataverse-type": "PicklistType",
-          "x-ms-schema-name": "new_WorkflowStatus",
-          "enum": [
-            "Draft",
-            "Self-Submitted",
-            "Peer-Review",
-            "Manager-Draft",
-            "Calibration",
-            "Signed-Off"
-          ],
-          "x-ms-enum-values": [
-            100000000,
-            100000001,
-            100000002,
-            100000003,
-            100000004,
-            100000005
-          ],
-          "Color": [
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-          ],
-          "x-ms-optionsetmetadataid": "ed223cc2-d664-f111-ab0d-7ced8db5944a",
-          "x-ms-isGlobal": false,
-          "x-ms-optionsetdisplayname": "WorkflowStatus",
-          "x-ms-optionSetType": "Picklist"
-        },
-        "new_workflowstatusname": {
-          "type": "string",
-          "title": "new_workflowstatusname",
-          "x-ms-dataverse-attribute": "new_workflowstatusname",
-          "x-ms-dataverse-type": "VirtualType",
-          "x-ms-schema-name": "new_workflowstatusName",
-          "x-ms-read-only": true
+          "title": "ID",
+          "x-ms-dataverse-attribute": "new_id",
+          "x-ms-dataverse-type": "IntegerType",
+          "x-ms-schema-name": "new_ID"
         },
         "overriddencreatedon": {
           "type": "string",
@@ -541,7 +272,7 @@
             null,
             null
           ],
-          "x-ms-optionsetmetadataid": "7fbae4a0-3d61-f111-a825-000d3aa20d79",
+          "x-ms-optionsetmetadataid": "e6b30e40-575f-f111-a825-6045bd1ea933",
           "x-ms-isGlobal": false,
           "x-ms-optionsetdisplayname": "Status",
           "x-ms-optionSetType": "State"
@@ -572,7 +303,7 @@
             null,
             null
           ],
-          "x-ms-optionsetmetadataid": "89bae4a0-3d61-f111-a825-000d3aa20d79",
+          "x-ms-optionsetmetadataid": "f0b30e40-575f-f111-a825-6045bd1ea933",
           "x-ms-isGlobal": false,
           "x-ms-optionsetdisplayname": "Status Reason",
           "x-ms-optionSetType": "Status"
@@ -613,9 +344,8 @@
         "createdonbehalfbyyominame",
         "modifiedbyyominame",
         "modifiedonbehalfbyyominame",
-        "new_appraisalid",
-        "new_appraisalname",
-        "new_performanceappraisalid",
+        "new_department1id",
+        "new_departmentname",
         "ownerid",
         "owneridname",
         "owneridtype",

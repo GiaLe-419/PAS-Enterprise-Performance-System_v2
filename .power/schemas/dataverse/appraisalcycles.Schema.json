@@ -167,6 +167,28 @@
           "x-ms-read-only": true,
           "maxLength": 850
         },
+        "new_competencyweighting": {
+          "type": "string",
+          "title": "Competency Weighting",
+          "x-ms-dataverse-attribute": "new_competencyweighting",
+          "x-ms-dataverse-type": "IntegerType",
+          "x-ms-schema-name": "new_CompetencyWeighting"
+        },
+        "new_createat": {
+          "type": "string",
+          "title": "CreateAt",
+          "x-ms-dataverse-attribute": "new_createat",
+          "x-ms-dataverse-type": "DateTimeType",
+          "x-ms-schema-name": "new_CreateAt"
+        },
+        "new_createby": {
+          "type": "string",
+          "title": "CreateBy",
+          "x-ms-dataverse-attribute": "new_createby",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "new_CreateBy",
+          "maxLength": 100
+        },
         "new_cycleid": {
           "type": "string",
           "title": "CycleID",
@@ -230,6 +252,51 @@
           "x-ms-dataverse-attribute": "new_goalweighting",
           "x-ms-dataverse-type": "DecimalType",
           "x-ms-schema-name": "new_GoalWeighting"
+        },
+        "new_id": {
+          "type": "string",
+          "title": "ID",
+          "x-ms-dataverse-attribute": "new_id",
+          "x-ms-dataverse-type": "IntegerType",
+          "x-ms-schema-name": "new_ID"
+        },
+        "new_peerfeedback": {
+          "type": "string",
+          "title": "Peer Feedback",
+          "x-ms-dataverse-attribute": "new_peerfeedback",
+          "x-ms-dataverse-type": "BooleanType",
+          "x-ms-schema-name": "new_PeerFeedback",
+          "enum": [
+            "No",
+            "Yes"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "25573a23-596e-f111-ab0f-000d3ac8ad4d",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Peer Feedback",
+          "x-ms-optionSetType": "Boolean"
+        },
+        "new_peerfeedbackdeadline": {
+          "type": "string",
+          "title": "Peer Feedback Deadline",
+          "x-ms-dataverse-attribute": "new_peerfeedbackdeadline",
+          "x-ms-dataverse-type": "DateTimeType",
+          "x-ms-schema-name": "new_PeerFeedbackDeadline"
+        },
+        "new_peerfeedbackname": {
+          "type": "string",
+          "title": "new_peerfeedbackname",
+          "x-ms-dataverse-attribute": "new_peerfeedbackname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "new_peerfeedbackName",
+          "x-ms-read-only": true
         },
         "new_performanceyear": {
           "type": "string",

@@ -12,10 +12,24 @@ export const dataSourcesInfo = {
     "dataSourceType": "Dataverse",
     "apis": {}
   },
+  "new_appraisaldetailses": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "new_appraisaldetailsid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
   "new_customauditlogs": {
     "tableId": "",
     "version": "",
     "primaryKey": "new_customauditlogid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
+  "new_department1s": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "new_department1id",
     "dataSourceType": "Dataverse",
     "apis": {}
   },

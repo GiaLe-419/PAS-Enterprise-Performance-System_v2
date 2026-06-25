@@ -36,6 +36,14 @@
         "performanceappraisals": {
           "entitySetName": "new_performanceappraisals",
           "logicalName": "new_performanceappraisal"
+        },
+        "appraisaldetails": {
+          "entitySetName": "new_appraisaldetailses",
+          "logicalName": "new_appraisaldetails"
+        },
+        "departments": {
+          "entitySetName": "new_department1s",
+          "logicalName": "new_department1"
         }
       },
       "environmentVariableName": ""

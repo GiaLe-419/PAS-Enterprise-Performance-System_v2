@@ -181,19 +181,19 @@
           "x-ms-schema-name": "new_Department",
           "maxLength": 100
         },
-        "new_department1": {
+        "new_departmenttt": {
           "type": "string",
           "title": "Department",
-          "x-ms-dataverse-attribute": "new_department1",
+          "x-ms-dataverse-attribute": "new_departmenttt",
           "x-ms-dataverse-type": "LookupType",
-          "x-ms-schema-name": "new_Department1"
+          "x-ms-schema-name": "new_Departmenttt"
         },
-        "new_department1name": {
+        "new_departmentttname": {
           "type": "string",
-          "title": "new_department1name",
-          "x-ms-dataverse-attribute": "new_department1name",
+          "title": "new_departmentttname",
+          "x-ms-dataverse-attribute": "new_departmentttname",
           "x-ms-dataverse-type": "StringType",
-          "x-ms-schema-name": "new_Department1Name",
+          "x-ms-schema-name": "new_DepartmentttName",
           "x-ms-read-only": true,
           "maxLength": 850
         },
@@ -214,6 +214,22 @@
           "x-ms-dataverse-primary-id": true,
           "required": true,
           "x-ms-keyType": "primary"
+        },
+        "new_hrbusinesspartner": {
+          "type": "string",
+          "title": "HR Business Partner",
+          "x-ms-dataverse-attribute": "new_hrbusinesspartner",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "new_HRBusinessPartner"
+        },
+        "new_hrbusinesspartnername": {
+          "type": "string",
+          "title": "new_hrbusinesspartnername",
+          "x-ms-dataverse-attribute": "new_hrbusinesspartnername",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "new_HRBusinessPartnerName",
+          "x-ms-read-only": true,
+          "maxLength": 850
         },
         "new_id": {
           "type": "string",
@@ -274,6 +290,22 @@
           "x-ms-dataverse-type": "VirtualType",
           "x-ms-schema-name": "new_roleName",
           "x-ms-read-only": true
+        },
+        "new_skiplevelmanager": {
+          "type": "string",
+          "title": "Skip Level Manager",
+          "x-ms-dataverse-attribute": "new_skiplevelmanager",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "new_SkipLevelManager"
+        },
+        "new_skiplevelmanagername": {
+          "type": "string",
+          "title": "new_skiplevelmanagername",
+          "x-ms-dataverse-attribute": "new_skiplevelmanagername",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "new_SkipLevelManagerName",
+          "x-ms-read-only": true,
+          "maxLength": 850
         },
         "new_userid": {
           "type": "string",

@@ -1,18 +1,12 @@
 // src/components/DashboardView.tsx
 // ============================================================
-// MÀN HÌNH TỔNG QUAN (DASHBOARD)
-// ============================================================
-// Mục đích: Hiển thị tổng quan hệ thống và các task cần xử lý
-// - Thông tin user và cycle hiện tại
-// - Thống kê workflow
-// - Các KPI chính
-// - Các task pending theo role
-// - Cảnh báo hệ thống
+// SỬA LỖI HIỂN THỊ CYCLE ACTIVE
 // ============================================================
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useDataverse } from "@/src/context/DataverseContext";
-import { AuthUser } from "@/src/services/AuthService";
+import { useCycles } from "@/src/hooks/useCycles";
+import { AuthUser } from "@/src/generated/services/AuthService";
 import {
   Briefcase,
   Layers,
@@ -39,7 +33,7 @@ import {
 interface DashboardViewProps {
   setActiveTab: (tab: string) => void;
   setSelectedAppraisalId: (id: string | null) => void;
-  user: AuthUser; // Người dùng hiện tại
+  user: AuthUser;
 }
 
 // ============================================================
@@ -50,31 +44,39 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   setSelectedAppraisalId,
   user,
 }) => {
-  // Lấy dữ liệu từ DataverseContext
+  // ✅ Dùng useCycles để lấy cycles thật
   const {
     cycles,
-    // TODO: Thêm appraisals, users khi có
-    // appraisals,
-    // users,
-  } = useDataverse();
-
-  console.log("DashboardView - User:", user.name, "Role:", user.role);
-
-  // ===== TẠM THỜI: MOCK DATA =====
-  // TODO: Thay bằng dữ liệu thật từ DataverseContext
-  const mockUsers: AuthUser[] = [user];
-  const mockAppraisals: any[] = [];
-  const safeCycles = cycles || [];
-  const mockActiveCycle = safeCycles.find((c) => c.status === "Active") || null;
+    loading: cyclesLoading,
+    loadCycles,
+  } = useCycles(user?.id, user?.email);
 
   // ===== STATE =====
   const [showOnlyMyWorkflow, setShowOnlyMyWorkflow] = useState(true);
+
+  // ===== TÌM CYCLE ACTIVE =====
+  const activeCycle = useMemo(() => {
+    if (!cycles || cycles.length === 0) return null;
+    return cycles.find((c) => c.status === "Active") || null;
+  }, [cycles]);
+
+  console.log("DashboardView - cycles:", cycles);
+  console.log("DashboardView - activeCycle:", activeCycle);
+
+  // ===== LOAD CYCLES =====
+  useEffect(() => {
+    loadCycles();
+  }, []);
+
+  // ===== TẠM THỜI: MOCK DATA (sẽ thay bằng dữ liệu thật sau) =====
+  const mockUsers: AuthUser[] = [user];
+  const mockAppraisals: any[] = [];
 
   // ===== FILTER APPRAISALS =====
   const filteredAppraisals = useMemo(() => {
     if (user.role === "Employee") {
       return mockAppraisals.filter(
-        (a) => a.employeeId === user.id && a.cycleId === mockActiveCycle?.id,
+        (a) => a.employeeId === user.id && a.cycleId === activeCycle?.id,
       );
     }
     if (user.role === "Manager") {
@@ -84,11 +86,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       return mockAppraisals.filter(
         (a) =>
           mySubordinateIds.includes(a.employeeId) &&
-          a.cycleId === mockActiveCycle?.id,
+          a.cycleId === activeCycle?.id,
       );
     }
     return mockAppraisals;
-  }, [mockAppraisals, user, mockUsers, mockActiveCycle]);
+  }, [mockAppraisals, user, mockUsers, activeCycle]);
 
   // ===== STAGE STATS =====
   const stageStats = {
@@ -112,7 +114,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   // ===== OVERDUE =====
   const overdueAppraisals = mockAppraisals.filter((a) => {
     return (
-      a.cycleId === mockActiveCycle?.id &&
+      a.cycleId === activeCycle?.id &&
       a.currentStage === "GoalSetup" &&
       !a.isGoalApproved
     );
@@ -129,7 +131,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     // Employee tasks
     if (user.role === "Employee") {
       const myAppraisal = mockAppraisals.find(
-        (a) => a.employeeId === user.id && a.cycleId === mockActiveCycle?.id,
+        (a) => a.employeeId === user.id && a.cycleId === activeCycle?.id,
       );
       if (myAppraisal) {
         if (myAppraisal.currentStage === "GoalSetup") {
@@ -152,18 +154,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             appraisalId: myAppraisal.id,
             priority: "Critical",
           });
-        } else if (
-          myAppraisal.currentStage === "SignOff" &&
-          !myAppraisal.signOff?.employeeSigned
-        ) {
-          tasks.push({
-            id: "t_signoff",
-            title: "Complete Digital Sign-off",
-            desc: "Review your calibrated evaluation report, provide final reflections, and sign.",
-            tab: "appraisals",
-            appraisalId: myAppraisal.id,
-            priority: "Critical",
-          });
         }
       }
     }
@@ -173,7 +163,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       const subordinates = mockUsers.filter((u) => u.managerId === user.id);
       subordinates.forEach((sub) => {
         const subApp = mockAppraisals.find(
-          (a) => a.employeeId === sub.id && a.cycleId === mockActiveCycle?.id,
+          (a) => a.employeeId === sub.id && a.cycleId === activeCycle?.id,
         );
         if (subApp) {
           if (subApp.currentStage === "GoalSetup" && !subApp.isGoalApproved) {
@@ -203,7 +193,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
     // HR tasks
     if (user.role === "HR") {
-      const draftCycles = safeCycles.filter((c) => c.status === "Draft");
+      const draftCycles = cycles?.filter((c) => c.status === "Draft") || [];
       if (draftCycles.length > 0) {
         tasks.push({
           id: "t_hr_p",
@@ -226,28 +216,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           priority: "Critical",
         });
       }
-    }
-
-    // SeniorManager tasks
-    if (user.role === "SeniorManager") {
-      mockAppraisals.forEach((subApp) => {
-        if (
-          subApp.cycleId === mockActiveCycle?.id &&
-          subApp.currentStage === "SignOff" &&
-          subApp.signOff?.employeeSigned &&
-          !subApp.signOff?.managerSigned
-        ) {
-          const subUser = mockUsers.find((u) => u.id === subApp.employeeId);
-          tasks.push({
-            id: `t_sl_seal_${subApp.id}`,
-            title: `Executive Sealing: ${subUser?.name || "Employee"}`,
-            desc: `Review final validated metrics, affix Executive digital seal and formally close appraisal package.`,
-            tab: "appraisals",
-            appraisalId: subApp.id,
-            priority: "Critical",
-          });
-        }
-      });
     }
 
     return tasks;
@@ -277,7 +245,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span className="text-white font-bold">{user.name}</span>. You are
             operating in the{" "}
             <span className="text-white bg-slate-800 px-2 py-0.5 rounded text-xs font-mono border border-slate-700">
-              {mockActiveCycle ? mockActiveCycle.name : "No Active Cycle"}
+              {activeCycle ? activeCycle.name : "No Active Cycle"}
             </span>
             .
           </p>
@@ -315,10 +283,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 Bạn có {currentTasks.length} tác vụ đang chờ xử lý trong chu kỳ
                 hiện tại.
               </p>
-              <p className="text-[11px] text-indigo-50 opacity-80 uppercase font-mono tracking-tighter">
-                Status: {currentTasks.length} Pending Assignments detected in
-                Matrix Workbench.
-              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -338,57 +302,39 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 font-mono">
           Workflow Status Funnel
         </h3>
-        <div
-          className={`grid grid-cols-2 ${mockActiveCycle?.peerFeedbackEnabled ? "lg:grid-cols-6" : "lg:grid-cols-6"} gap-4`}
-        >
-          <div className="bg-white p-4 rounded-xl border border-slate-200 text-center shadow-xs">
-            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">
-              Goal Setup
-            </p>
-            <p className="text-2xl font-bold text-slate-700 mt-1">
-              {stageStats.GoalSetup}
-            </p>
-          </div>
-          <div className="bg-white p-4 rounded-xl border border-slate-200 text-center shadow-xs">
-            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">
-              Self Appr.
-            </p>
-            <p className="text-2xl font-bold text-slate-700 mt-1">
-              {stageStats.SelfAppraisal}
-            </p>
-          </div>
-          <div className="bg-white p-4 rounded-xl border border-slate-200 text-center shadow-xs">
-            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">
-              Mgr Appr.
-            </p>
-            <p className="text-2xl font-bold text-slate-700 mt-1">
-              {stageStats.ManagerAppraisal}
-            </p>
-          </div>
-          <div className="bg-white p-4 rounded-xl border border-slate-200 text-center shadow-xs">
-            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">
-              Calibration
-            </p>
-            <p className="text-2xl font-bold text-slate-700 mt-1">
-              {stageStats.Calibration}
-            </p>
-          </div>
-          <div className="bg-white p-4 rounded-xl border border-slate-200 text-center shadow-xs bg-blue-50/20 border-blue-105">
-            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">
-              Sign-Off
-            </p>
-            <p className="text-2xl font-bold text-blue-900 mt-1">
-              {stageStats.SignOff}
-            </p>
-          </div>
-          <div className="bg-white p-4 rounded-xl border border-slate-200 text-center shadow-xs bg-emerald-50/20 border-emerald-100">
-            <p className="text-[10px] text-emerald-600 uppercase font-bold tracking-widest">
-              Completed
-            </p>
-            <p className="text-2xl font-bold text-emerald-800 mt-1">
-              {stageStats.Completed}
-            </p>
-          </div>
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+          {[
+            { label: "Goal Setup", value: stageStats.GoalSetup },
+            { label: "Self Appr.", value: stageStats.SelfAppraisal },
+            { label: "Mgr Appr.", value: stageStats.ManagerAppraisal },
+            { label: "Calibration", value: stageStats.Calibration },
+            { label: "Sign-Off", value: stageStats.SignOff },
+            { label: "Completed", value: stageStats.Completed },
+          ].map((stat, i) => (
+            <div
+              key={i}
+              className={`bg-white p-4 rounded-xl border border-slate-200 text-center shadow-xs ${
+                stat.label === "Completed"
+                  ? "bg-emerald-50/20 border-emerald-100"
+                  : ""
+              }`}
+            >
+              <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">
+                {stat.label}
+              </p>
+              <p
+                className={`text-2xl font-bold mt-1 ${
+                  stat.label === "Completed"
+                    ? "text-emerald-800"
+                    : stat.label === "Sign-Off"
+                      ? "text-blue-900"
+                      : "text-slate-700"
+                }`}
+              >
+                {stat.value}
+              </p>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -402,7 +348,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             { label: "Employees", value: mockUsers.length },
             {
               label: "Active Cycles",
-              value: safeCycles.filter((c) => c.status === "Active").length,
+              value: cycles?.filter((c) => c.status === "Active").length || 0,
             },
             {
               label: "Pending Reviews",
@@ -454,7 +400,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           ) : (
             <div className="space-y-4">
-              {currentTasks.map((task, idx) => {
+              {currentTasks.map((task) => {
                 const isCritical = task.priority === "Critical";
                 const isHigh = task.priority === "High";
 
@@ -526,26 +472,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         {/* ===== SIDEBAR PANEL ===== */}
         <aside className="lg:col-span-4 space-y-6">
-          {/* Review Parameters */}
+          {/* ===== REVIEW PARAMETERS ===== */}
           <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
             <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
               <span className="text-xs font-bold text-slate-800 uppercase tracking-widest font-mono">
                 Review Parameters
               </span>
               <span className="bg-emerald-50 text-emerald-800 border border-emerald-100 text-[10px] font-bold px-2 py-0.5 rounded-full font-mono uppercase">
-                Active
+                {activeCycle ? "Active" : "Inactive"}
               </span>
             </div>
 
-            {mockActiveCycle ? (
+            {activeCycle ? (
               <div className="p-4 space-y-4">
                 <div className="space-y-1">
                   <h4 className="text-xs font-bold text-slate-800">
-                    {mockActiveCycle.name}
+                    {activeCycle.name}
                   </h4>
                   <p className="text-[11px] text-slate-500 font-mono">
-                    Period: {mockActiveCycle.startDate} to{" "}
-                    {mockActiveCycle.endDate}
+                    Period: {activeCycle.startDate} to {activeCycle.endDate}
                   </p>
                 </div>
 
@@ -577,34 +522,34 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   </div>
                   <div className="flex items-center gap-2 mt-1.5">
                     <span className="text-[10px] font-bold text-blue-900">
-                      Goals ({mockActiveCycle.goalWeighting}%)
+                      Goals ({activeCycle.goalWeighting}%)
                     </span>
                     <div className="flex-1 bg-slate-250 h-2 rounded-full overflow-hidden flex">
                       <div
                         className="bg-blue-900 h-2"
-                        style={{ width: `${mockActiveCycle.goalWeighting}%` }}
+                        style={{ width: `${activeCycle.goalWeighting}%` }}
                       />
                       <div
                         className="bg-blue-400 h-2"
                         style={{
-                          width: `${100 - mockActiveCycle.goalWeighting}%`,
+                          width: `${100 - activeCycle.goalWeighting}%`,
                         }}
                       />
                     </div>
                     <span className="text-[10px] font-bold text-blue-500">
-                      Comp ({100 - mockActiveCycle.goalWeighting}%)
+                      Comp ({100 - activeCycle.goalWeighting}%)
                     </span>
                   </div>
                 </div>
               </div>
             ) : (
               <div className="p-6 text-center text-slate-400 text-xs">
-                No active cycle. Login as HR BP to configure one.
+                No active cycle. Please contact HR to configure one.
               </div>
             )}
           </div>
 
-          {/* System Warnings */}
+          {/* ===== SYSTEM WARNINGS ===== */}
           <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
             <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
               <span className="text-xs font-bold text-slate-800 uppercase tracking-widest font-mono">
@@ -637,7 +582,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       <p className="text-[10px] text-red-700 leading-relaxed">
                         {emp.name} is{" "}
                         <span className="font-bold underline">overdue</span> for
-                        H1 cycle goal setup. Email pinged.
+                        goal setup.
                       </p>
                     </div>
                   </div>
@@ -651,8 +596,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <div className="space-y-1">
                     <span className="font-bold">All Cycle Milestones Met</span>
                     <p className="text-[10px] text-slate-550 leading-relaxed">
-                      No active milestones are currently overdue across cohort
-                      groups.
+                      No active milestones are currently overdue.
                     </p>
                   </div>
                 </div>
@@ -668,8 +612,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     Scale Rating Inflation Warning
                   </span>
                   <p className="text-[10px] text-amber-700 leading-relaxed">
-                    Automatic auditing flags potential rating inflation in the
-                    Design Cohort. Calibration checks required.
+                    Automatic auditing flags potential rating inflation.
+                    Calibration checks required.
                   </p>
                 </div>
               </div>
